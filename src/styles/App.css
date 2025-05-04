@@ -77,8 +77,15 @@
     .send-svg rect{
         @apply dark:fill-white
     }
+
+    /* SVG Styling for Lines Btn*/
+    .lines-svg path{
+        @apply dark:fill-background
+    }
 }
 
 @layer utilities{
-
+    .clickeable{
+        @apply hover:cursor-pointer
+    }
 }

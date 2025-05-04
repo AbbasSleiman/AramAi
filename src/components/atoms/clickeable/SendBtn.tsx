@@ -1,7 +1,7 @@
 
 const SendBtn = () => {
   return (
-    <div>
+    <div  className="clickeable">
       <svg
         className="send-svg"
         width="35"

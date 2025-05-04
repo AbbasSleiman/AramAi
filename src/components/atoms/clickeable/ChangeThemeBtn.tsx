@@ -17,7 +17,7 @@ const ChangeThemeBtn = () => {
   };
 
   return (
-    <div onClick={handleToggleTheme}>
+    <div onClick={handleToggleTheme} className="clickeable">
       {theme === "light" ? (
         <svg
           width="24"
