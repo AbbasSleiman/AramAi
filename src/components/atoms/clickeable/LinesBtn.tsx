@@ -1,0 +1,21 @@
+
+const LinesBtn = () => {
+  return (
+    <div>
+      <svg
+        width="32"
+        height="32"
+        viewBox="0 0 32 32"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5.33337 14.6667H21.3334V17.3333H5.33337V14.6667ZM5.33337 8H26.6667V10.6667H5.33337V8ZM5.33337 24H14.98V21.3333H5.33337V24Z"
+          fill="white"
+        />
+      </svg>
+    </div>
+  );
+};
+
+export default LinesBtn;

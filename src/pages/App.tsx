@@ -1,0 +1,19 @@
+import "../styles/App.css";
+
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import MainPage from "./MainPage";
+import ChatPage from "./ChatPage";
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainPage />} />
+        <Route path="chat" element={<ChatPage />} />
+        {/* <Route path="*" element={<_404Page />} /> */}
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;

@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+
+@theme {
+  --color-background: #FFFF;
+  --color-text: #202020;
+  --color-secondary:#D4D4D4;
+  --color-third: #F6F6F6;
+
+  --color-background-dark: #202020;
+  --color-text-dark: #FFFFFF;
+  --color-secondary-dark:#7F7F7F;
+  --color-third-dark: #A1A1A1;
+  --color-background2-dark: #2B2B2B;
+
+  --font-roboto: 'Roboto', 'sans-serif';
+  --font-notosans:'Noto Sans', 'sans-serif';
+  --font-outfit:'Outfit','sans-serif';
+}
+
+@layer base{
+    body{
+        @apply bg-background dark:bg-background-dark;
+    }
+    h1,h2,h3,p,span,a{
+        @apply dark:text-text-dark;
+    }
+    h1{
+        @apply antialiased font-outfit text-3xl font-bold;
+    }
+    p{
+        @apply antialiased font-roboto text-xl font-normal ;
+    }
+    a{
+        @apply antialiased font-notosans text-base font-normal;
+    }
+
+    textarea{
+        @apply outline-none dark:text-text-dark dark:placeholder-text-dark
+    }
+    
+    ::placeholder{
+        opacity: 75%;
+    }
+
+}
+
+@layer components{
+
+    /* Outer Container for the chat box */
+    .input-chat-container{
+        @apply border border-background2-dark dark:bg-background2-dark ;
+    }
+
+    /* SVG Styling for Logo*/
+    .logo circle{
+        @apply dark:stroke-background;
+    }
+    .logo .letter{
+        @apply dark:stroke-background;
+    }
+    .logo path{
+        @apply dark:fill-background;
+    }
+
+    /* SVG Styling for Send Btn in ChatBox*/
+    .send-svg{
+        @apply dark:fill-background2-dark
+    }
+    .send-svg path{
+        @apply fill-white dark:fill-background2-dark
+    }
+    .send-svg rect{
+        @apply dark:fill-white
+    }
+}
+
+@layer utilities{
+
+}
