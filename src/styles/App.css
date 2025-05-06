@@ -26,27 +26,46 @@
     body{
         @apply bg-background dark:bg-background-dark;
     }
+    /* Typography Styling */
     h1,h2,h3,p,span,a{
         @apply dark:text-text-dark;
     }
     h1{
         @apply antialiased font-outfit text-3xl font-bold;
     }
+    h2{
+        @apply antialiased font-outfit text-3xl font-light;
+    }
     p{
         @apply antialiased font-roboto text-xl font-normal ;
     }
     a{
-        @apply antialiased font-notosans text-base font-normal;
+        @apply antialiased font-notosans text-base font-normal hover:underline;
     }
 
+    /* Form Styling*/
+    input[type="text"],
+    input[type="email"],
+    input[type="password"]{
+        @apply w-full px-4 py-3 border-2 border-background2-dark rounded-lg dark:bg-background
+    }
+    label{
+        @apply font-roboto text-sm font-light dark:text-text-dark
+    }
     textarea{
         @apply outline-none dark:text-text-dark dark:placeholder-text-dark
     }
-    
     ::placeholder{
-        opacity: 75%;
+        @apply opacity-75 text-sm
+    }
+    button{
+        @apply w-full px-4 py-3 bg-background2-dark dark:bg-background text-text-dark dark:text-text rounded-lg font-outfit text-base hover:bg-background-dark
     }
 
+
+    hr{
+        @apply bg-background-dark dark:bg-background
+    }
 }
 
 @layer components{
@@ -64,7 +83,7 @@
         @apply dark:stroke-background;
     }
     .logo path{
-        @apply dark:fill-background;
+        @apply fill-background-dark dark:fill-background;
     }
 
     /* SVG Styling for Send Btn in ChatBox*/
@@ -81,6 +100,11 @@
     /* SVG Styling for Lines Btn*/
     .lines-svg path{
         @apply dark:fill-background
+    }
+
+    /* Style for Button */
+    .button-styled{
+        @apply bg-third text-text hover:bg-secondary
     }
 }
 

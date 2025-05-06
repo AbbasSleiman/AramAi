@@ -3,6 +3,7 @@ import "../styles/App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainPage from "./MainPage";
 import ChatPage from "./ChatPage";
+import LogInPage from "./LogInPage";
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="chat" element={<ChatPage />} />
+        <Route path="login" element={<LogInPage />} />
         {/* <Route path="*" element={<_404Page />} /> */}
       </Routes>
     </Router>
