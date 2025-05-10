@@ -110,6 +110,15 @@
 
 @layer utilities{
     .clickeable{
-        @apply hover:cursor-pointer
+        @apply cursor-pointer
     }
+
+    /* Error CSS */
+    .error{
+        @apply text-red-600 border-red-600
+    }
+    .error-field{
+        @apply text-red-600 border-red-600
+    }
+
 }

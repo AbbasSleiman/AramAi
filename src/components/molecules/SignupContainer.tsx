@@ -2,7 +2,10 @@ import InputField from "../atoms/InputField";
 import Button from "../atoms/clickeable/Button";
 import StyledButton from "../atoms/clickeable/StyledButton";
 
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+} from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase/firebaseConfig";
 import { useEffect, useState } from "react";
@@ -11,7 +14,7 @@ import { AppDispacth } from "../../lib/store/store";
 import { useDispatch } from "react-redux";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
 
-const LoginContainer = () => {
+const SignupContainer = () => {
   // custom validation hook
   const { emailStatus, passwordStatus, validateForm } = useFormValidation();
 
@@ -27,7 +30,7 @@ const LoginContainer = () => {
   const [status, setStatus] = useState<string>("initial");
 
   // Sign Up with Firebase function
-  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     setStatus("loading");
 
     event.preventDefault();
@@ -40,7 +43,7 @@ const LoginContainer = () => {
 
     // create user in firebase
     try {
-      const userCredentials = await signInWithEmailAndPassword(
+      const userCredentials = await createUserWithEmailAndPassword(
         auth,
         email,
         password
@@ -74,12 +77,12 @@ const LoginContainer = () => {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 p-2 m-2">
-      <h2>Welcome Back</h2>
+      <h2>Create Account</h2>
 
       {/* Form Container */}
       <form
-        className="flex flex-col items-center justify-center gap-4 "
-        onSubmit={handleSignIn}
+        onSubmit={handleSignUp}
+        className="flex flex-col items-center justify-center gap-4 w-72"
       >
         <div className="w-full">
           <label
@@ -91,24 +94,26 @@ const LoginContainer = () => {
           <InputField
             type="email"
             name="email"
+            placeholder="Input your email"
             on_change={(e) => setEmail(e.target.value)}
             value={email}
-            placeholder="Input your email"
+            // classname={`${emailStatus === "empty" || "invalid" ? "error" : ""}`}
           />
         </div>
         <div className="w-full">
           <label
             htmlFor="password"
-            className={`${emailStatus === "invalid" ? "error" : ""}`}
+            className={`${passwordStatus === "invalid" ? "error" : ""}`}
           >
             Password
           </label>
           <InputField
             type="password"
             name="password"
+            placeholder="Input your Password"
             on_change={(e) => setPassword(e.target.value)}
             value={password}
-            placeholder="Input your Password"
+            // classname={`${passwordStatus === "empty" || "invalid" ? "error" : ""}`}
           />
         </div>
         {
@@ -132,15 +137,17 @@ const LoginContainer = () => {
         {status === "loading" ? (
           <p>loading...</p>
         ) : (
-          <Button text="Login" classname="mt-3" type="submit" />
+          <Button text="Create Account" classname="mt-3" type="submit" />
         )}
       </form>
+
       <span className="font-notosans text-sm font-normal opacity-75">
-        New Here?{" "}
-        <Link className="text-sm" to="/signup">
-          Create an Account
+        Already have an account?{" "}
+        <Link className="text-sm" to="/login">
+          Login
         </Link>
       </span>
+
       {/* Bottom Container */}
       <div className="flex flex-row items-center justify-center gap-2 w-full p-2 opacity-55">
         <hr className="w-full" />
@@ -159,4 +166,4 @@ const LoginContainer = () => {
   );
 };
 
-export default LoginContainer;
+export default SignupContainer;
