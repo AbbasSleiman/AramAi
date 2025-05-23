@@ -59,7 +59,7 @@
         @apply opacity-75 text-sm
     }
     button{
-        @apply w-full px-4 py-3 bg-background2-dark dark:bg-background text-text-dark dark:text-text rounded-lg font-outfit text-base hover:bg-background-dark
+        @apply w-full px-4 py-3 bg-background2-dark dark:bg-background text-text-dark dark:text-text rounded-lg font-outfit text-base hover:bg-background-dark cursor-pointer
     }
 
 
@@ -102,9 +102,12 @@
         @apply dark:fill-background
     }
 
-    /* Style for Button */
+    /* Style for Buttons */
     .button-styled{
         @apply bg-third text-text hover:bg-secondary
+    }
+    .thin-button{
+        @apply flex justify-start items-center px-2 py-1 bg-background text-text hover:bg-third dark:bg-background2-dark dark:text-text-dark dark:hover:bg-background-dark
     }
 }
 
