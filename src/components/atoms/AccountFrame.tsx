@@ -50,7 +50,7 @@ const AccountFrame = ({
         <ThinButton text="Terms & Condition" />
       </div>
       <hr className="dark:text-background opacity-25" />
-      <NotificationBox text="Error Logging Out" classname="bg-red-500 text-text-dark"/>
+      {/* <NotificationBox text="Error Logging Out" classname="bg-red-500 text-text-dark"/> */}
       <ThinButton text="logout" classname="error" on_click={handleLogout}/>
     </div>
   );

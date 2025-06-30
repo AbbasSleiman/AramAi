@@ -47,7 +47,7 @@
     input[type="text"],
     input[type="email"],
     input[type="password"]{
-        @apply w-full px-4 py-3 border-2 border-background2-dark rounded-lg dark:bg-background
+        @apply w-full px-4 py-3 border-2 border-background2-dark rounded-lg dark:bg-background 
     }
     label{
         @apply font-roboto text-sm font-light dark:text-text-dark
@@ -59,7 +59,7 @@
         @apply opacity-75 text-sm
     }
     button{
-        @apply w-full px-4 py-3 bg-background2-dark dark:bg-background text-text-dark dark:text-text rounded-lg font-outfit text-base hover:bg-background-dark cursor-pointer
+        @apply w-full px-4 py-3 bg-background2-dark dark:bg-background text-text-dark dark:text-text rounded-lg font-outfit text-base hover:bg-background-dark dark:hover:bg-secondary  cursor-pointer
     }
 
 
