@@ -7,7 +7,6 @@ import { auth } from "../../lib/firebase/firebaseConfig";
 
 import useOutsideClick from "../../lib/hooks/useOutsideClick";
 import ThinButton from "./clickeable/ThinButton";
-import NotificationBox from "./utilities/NotificationBox";
 
 const AccountFrame = ({
   isVisible,

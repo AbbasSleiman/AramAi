@@ -109,6 +109,10 @@
     .thin-button{
         @apply flex justify-start items-center px-2 py-1 bg-background text-text hover:bg-third dark:bg-background2-dark dark:text-text-dark dark:hover:bg-background-dark
     }
+
+    .hoverable-box{
+        @apply hover:bg-secondary dark:hover:bg-background2-dark transition-colors duration-200 ease-in-out rounded-full p-1
+    }
 }
 
 @layer utilities{

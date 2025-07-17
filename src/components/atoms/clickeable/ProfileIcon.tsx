@@ -1,11 +1,11 @@
 import AccountFrame from "../AccountFrame";
+import avatarImg from "/avatar.jpg";
 
-import { useSelector } from "react-redux";
-import { RootState } from "../../../lib/store/store";
-import { getAuth } from "firebase/auth";
-import { useState } from "react";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { useEffect, useState } from "react";
 
 const ProfileIcon = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [isAccountFrameToggled, setAccountFrameToggled] =
     useState<boolean>(false);
 
@@ -13,14 +13,18 @@ const ProfileIcon = () => {
     setAccountFrameToggled((prev) => !prev);
   };
 
-  const auth = getAuth();
-  const user = auth.currentUser;
+  useEffect(() => {
+    const auth = getAuth();
+    return onAuthStateChanged(auth, setUser);
+  }, []);
+
+  const src = user?.photoURL ?? avatarImg;
 
   return (
     <div>
-      <div onClick={toggleAccountFrame}>
+      <div onClick={toggleAccountFrame} className="hoverable-box cursor-pointer w-fit">
         <img
-          src={"/avatar.jpg"}
+          src={src}
           alt="Profile Icon Image"
           className=" w-8 h-8 bg-secondary rounded-full object-cover"
         />
@@ -29,7 +33,6 @@ const ProfileIcon = () => {
         isVisible={isAccountFrameToggled}
         toggleVisibility={toggleAccountFrame}
       />
-      
     </div>
   );
 };

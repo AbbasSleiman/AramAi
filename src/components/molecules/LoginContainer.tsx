@@ -2,16 +2,26 @@ import InputField from "../atoms/InputField";
 import Button from "../atoms/clickeable/Button";
 import StyledButton from "../atoms/clickeable/StyledButton";
 
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
-import { auth } from "../../lib/firebase/firebaseConfig";
 import { useEffect, useState } from "react";
 import { signInUser } from "../../lib/store/slices/userSlice";
 import { AppDispacth } from "../../lib/store/store";
 import { useDispatch } from "react-redux";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
+import useSignInWithGoogle from "../../lib/hooks/useSignInWithGoogle";
 
 const LoginContainer = () => {
+  // Initialize Google Auth Provider
+  const provider = new GoogleAuthProvider();
+  const auth = getAuth();
+
   // custom validation hook
   const { emailStatus, passwordStatus, validateForm } = useFormValidation();
 
@@ -150,6 +160,7 @@ const LoginContainer = () => {
 
       <div className="w-full">
         <StyledButton
+          onClick={useSignInWithGoogle}
           text="Continue With Google"
           src="/Google.svg"
           classname="mt-3"

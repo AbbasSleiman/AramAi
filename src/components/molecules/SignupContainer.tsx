@@ -4,6 +4,8 @@ import StyledButton from "../atoms/clickeable/StyledButton";
 
 import {
   createUserWithEmailAndPassword,
+  getAuth,
+  GoogleAuthProvider,
   onAuthStateChanged,
 } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
@@ -13,6 +15,7 @@ import { signInUser } from "../../lib/store/slices/userSlice";
 import { AppDispacth } from "../../lib/store/store";
 import { useDispatch } from "react-redux";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
+import useSignInWithGoogle from "../../lib/hooks/useSignInWithGoogle";
 
 const SignupContainer = () => {
   // custom validation hook
@@ -157,6 +160,7 @@ const SignupContainer = () => {
 
       <div className="w-full">
         <StyledButton
+          onClick={useSignInWithGoogle}
           text="Continue With Google"
           src="/Google.svg"
           classname="mt-3"
