@@ -6,8 +6,6 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
   getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
 } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -18,8 +16,6 @@ import { useFormValidation } from "../../lib/hooks/useFormValidation";
 import useSignInWithGoogle from "../../lib/hooks/useSignInWithGoogle";
 
 const LoginContainer = () => {
-  // Initialize Google Auth Provider
-  const provider = new GoogleAuthProvider();
   const auth = getAuth();
 
   // custom validation hook

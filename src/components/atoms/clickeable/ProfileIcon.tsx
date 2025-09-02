@@ -1,5 +1,4 @@
 import AccountFrame from "../AccountFrame";
-import avatarImg from "/avatar.jpg";
 
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { useEffect, useState } from "react";
@@ -18,7 +17,7 @@ const ProfileIcon = () => {
     return onAuthStateChanged(auth, setUser);
   }, []);
 
-  const src = user?.photoURL ?? avatarImg;
+  const src = user?.photoURL ?? "/avatar.jpg";
 
   return (
     <div>
