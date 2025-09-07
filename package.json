@@ -13,7 +13,7 @@
     "@reduxjs/toolkit": "^2.8.0",
     "@tailwindcss/vite": "^4.1.4",
     "aramai": "file:",
-    "firebase": "^11.6.1",
+    "firebase": "^11.10.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-redux": "^9.2.0",

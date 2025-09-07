@@ -1,5 +1,7 @@
-// ChatPage component - Updated with fixed layout for SideBar
+// ChatPage component - Updated with User Authentication
 import { useState, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "../lib/store/store";
 
 import Logo from "../components/atoms/Logo";
 import InputChat from "../components/molecules/InputChat";
@@ -23,6 +25,7 @@ interface Message {
 
 interface ChatSession {
   id: string;
+  user_id: string;
   title: string;
   created_at: string;
   updated_at: string;
@@ -38,6 +41,9 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Get user info from Redux
+  const user = useSelector((state: RootState) => state.user);
+  
   // Refs for auto-scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,19 +55,30 @@ const ChatPage = () => {
     scrollToBottom();
   }, [currentSession?.messages]);
 
-  // Load chat sessions on component mount
+  // Load chat sessions when user is available
   useEffect(() => {
-    loadChatSessions();
-  }, []);
+    if (user.userId) {
+      loadChatSessions();
+    }
+  }, [user.userId]);
 
   const handleSideBar = () => {
     setSideBarOpened((prev) => !prev);
   };
 
-  // API Functions
+  // API Functions with user authentication
   const loadChatSessions = async () => {
+    if (!user.userId) {
+      console.warn('⚠️ No user ID available for loading sessions');
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/sessions`);
+      const response = await fetch(`${API_BASE_URL}/chat/sessions`, {
+        headers: {
+          'X-User-Id': user.userId,
+        },
+      });
       if (response.ok) {
         const sessions = await response.json();
         setChatSessions(sessions);
@@ -75,11 +92,17 @@ const ChatPage = () => {
   };
 
   const createNewSession = async () => {
+    if (!user.userId) {
+      console.warn('⚠️ No user ID available for creating session');
+      return null;
+    }
+    
     try {
       const response = await fetch(`${API_BASE_URL}/chat/sessions`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-User-Id': user.userId,
         },
         body: JSON.stringify({ title: 'New Chat' })
       });
@@ -101,22 +124,33 @@ const ChatPage = () => {
   };
 
   const loadSession = async (sessionId: string) => {
+    if (!user.userId) {
+      console.warn('⚠️ No user ID available for loading session');
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`);
+      const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+        headers: {
+          'X-User-Id': user.userId,
+        },
+      });
       if (response.ok) {
         const session = await response.json();
         setCurrentSession(session);
         console.log('✅ Loaded session:', session.id, 'with', session.messages.length, 'messages');
       } else {
         console.error('Failed to load session');
+        setError('Failed to load session');
       }
     } catch (error) {
       console.error('Error loading session:', error);
+      setError('Error loading session');
     }
   };
 
   const sendMessage = async (message: string, type: 'translate' | 'continue') => {
-    if (!message.trim()) return;
+    if (!message.trim() || !user.userId) return;
 
     setIsLoading(true);
     setError(null);
@@ -188,7 +222,8 @@ const ChatPage = () => {
       const saveResponse = await fetch(`${API_BASE_URL}/chat/sessions/${session.id}/messages`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-User-Id': user.userId,
         },
         body: JSON.stringify({
           messages: [userMessage, assistantMessage]
@@ -231,11 +266,16 @@ const ChatPage = () => {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
+    if (!user.userId) return;
+    
     if (!confirm('Are you sure you want to delete this chat?')) return;
     
     try {
       const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'X-User-Id': user.userId,
+        },
       });
       
       if (response.ok) {
@@ -248,11 +288,17 @@ const ChatPage = () => {
         }
         
         console.log('✅ Session deleted:', sessionId);
+      } else {
+        setError('Failed to delete session');
       }
     } catch (error) {
       console.error('Failed to delete session:', error);
+      setError('Failed to delete session');
     }
   };
+
+  // Removed unused handleUpdateSessionTitle function
+  // Title updates are handled directly in the SideBar component
 
   const renderMessage = (message: Message) => (
     <div
@@ -284,9 +330,21 @@ const ChatPage = () => {
     </div>
   );
 
+  // Show loading if user is not ready
+  if (!user.is_auth || !user.userId) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Setting up your account...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* SideBar - Now with fixed positioning */}
+      {/* SideBar */}
       <SideBar 
         isVisible={sideBarOpened} 
         toggleVisiblity={handleSideBar}
@@ -297,8 +355,8 @@ const ChatPage = () => {
         onDeleteSession={handleDeleteSession}
       />
       
-      {/* Main Content Area - Adjusted for sidebar */}
-      <div className={`flex-1 flex flex-col h-screen min-w-0 transition-all duration-300 ${sideBarOpened ? 'lg:ml-0' : 'lg:ml-0'}`}>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-screen min-w-0">
         <OuterNavBar toggleVisiblity={handleSideBar} />
         
         {/* Main Chat Area */}
@@ -309,6 +367,9 @@ const ChatPage = () => {
             <h1 className="antialiased font-outfit text-3xl font-bold mb-4">
               Ancient Wisdom. Modern Intelligence.
             </h1>
+            <p className="text-gray-600 mb-6">
+              Welcome {user.username}! Start a conversation to translate or continue text in Syriac.
+            </p>
             <button
               onClick={createNewSession}
               className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors"
@@ -318,7 +379,7 @@ const ChatPage = () => {
           </div>
         ) : (
           <>
-            {/* Chat Messages - Fixed scrollable area */}
+            {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50 min-h-0">
               <div className="max-w-4xl mx-auto">
                 {currentSession.messages.map(renderMessage)}
@@ -353,7 +414,7 @@ const ChatPage = () => {
               </div>
             )}
             
-            {/* Input Area - Fixed positioning */}
+            {/* Input Area */}
             <InputChat onSubmit={sendMessage} isLoading={isLoading} />
           </>
         )}

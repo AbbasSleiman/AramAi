@@ -1,4 +1,4 @@
-// components/routes/AuthRedirectRoute.tsx
+// routes/AuthRedirectRoute.tsx
 import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
 import { RootState } from "../lib/store/store";
@@ -7,7 +7,8 @@ import { JSX } from "react";
 const AuthRedirectRoute = ({ children }: { children: JSX.Element }) => {
   const user = useSelector((state: RootState) => state.user);
 
-  if (user.is_auth) {
+  // If user is authenticated, redirect to chat
+  if (user.is_auth && user.userId) {
     return <Navigate to="/chat" replace />;
   }
 

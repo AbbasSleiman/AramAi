@@ -1,23 +1,25 @@
-import { useEffect, RefObject } from "react";
+// lib/hooks/useOutsideClick.ts
+import { useEffect } from 'react';
 
-type Handler = () => void;
-
-export default function useOutsideClick<T extends HTMLElement>(
-  ref: RefObject<T | null>,
-  handler: Handler,
-  active = true
-) {
+const useOutsideClick = <T extends HTMLElement>(
+  ref: React.RefObject<T | null>,
+  callback: () => void,
+  isActive: boolean = true
+) => {
   useEffect(() => {
-    if (!active) return;
+    if (!isActive) return;
 
-    const listener = (event: MouseEvent) => {
-      if (!ref.current || ref.current.contains(event.target as Node)) return;
-      handler();
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        callback();
+      }
     };
 
-    document.addEventListener("mousedown", listener);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", listener);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [ref, handler, active]);
-}
+  }, [ref, callback, isActive]);
+};
+
+export default useOutsideClick;

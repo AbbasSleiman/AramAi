@@ -14,28 +14,57 @@ import { AppDispacth } from "../lib/store/store";
 import { useDispatch } from "react-redux";
 import { signInUser, signOutUser } from "../lib/store/slices/userSlice";
 import { auth } from "../lib/firebase/firebaseConfig";
+import { createOrGetUser } from "../lib/api/userApi";
 
 function App() {
   const dispatch: AppDispacth = useDispatch();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        dispatch(
-          signInUser({
-            name: "",
-            username: user.email!.split("@")[0],
-            email: user.email,
-            uid: user.uid,
-          })
-        );
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          // Create/get user in local database FIRST
+          const localUser = await createOrGetUser({
+            firebase_uid: currentUser.uid,
+            email: currentUser.email || '',
+            username: currentUser.email?.split("@")[0] || '',
+          });
+
+          // Now dispatch with the ACTUAL username from database
+          dispatch(
+            signInUser({
+              name: "",
+              username: localUser.username, // Use database username, not email-based
+              email: currentUser.email,
+              uid: currentUser.uid,
+              userId: localUser.id, // Include userId directly
+            })
+          );
+
+          console.log('✅ User synced with local database:', localUser.id);
+          console.log('✅ Username from database:', localUser.username);
+        } catch (error) {
+          console.error('❌ Failed to sync user with local database:', error);
+          
+          // Fallback: use email-based username if database fails
+          dispatch(
+            signInUser({
+              name: "",
+              username: currentUser.email!.split("@")[0],
+              email: currentUser.email,
+              uid: currentUser.uid,
+            })
+          );
+        }
       } else {
+        // User is signed out
         dispatch(signOutUser());
+        console.log('✅ User signed out, Redux state cleared');
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [dispatch]);
 
   return (
     <Router>
