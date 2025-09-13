@@ -1,4 +1,4 @@
-// components/organisms/ProfileDropdown.tsx
+// components/organisms/ProfileDropdown.tsx - FIXED with dark mode support
 import { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../lib/store/store";
@@ -104,7 +104,7 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+      className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-background2-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
     >
       <div className="p-4">
         {/* Profile Header */}
@@ -113,17 +113,17 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
             {user.username?.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h3 className="font-medium text-gray-900">{user.username}</h3>
-            <p className="text-sm text-gray-500">{user.email}</p>
+            <h3 className="font-medium text-gray-900 dark:text-white">{user.username}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
           </div>
         </div>
 
-        <hr className="mb-4" />
+        <hr className="mb-4 border-gray-200 dark:border-gray-700" />
 
         {/* Profile Settings */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Username
             </label>
             {isEditing ? (
@@ -132,12 +132,12 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
                   type="text"
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   placeholder="Enter username"
                 />
                 
                 {error && (
-                  <p className="text-sm text-red-600">{error}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                 )}
                 
                 <div className="flex gap-2">
@@ -151,39 +151,39 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
                   <button
                     onClick={handleCancelEdit}
                     disabled={isLoading}
-                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                    className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
-          <div className="flex items-center justify-between">
-            <span className="text-gray-900">{user.username}</span>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="text-sm font-medium !text-blue-600 hover:!text-blue-800 transition-colors !w-auto !bg-transparent hover:!bg-blue-50 !p-1"
-            >
-              Edit
-            </button>
-          </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-900 dark:text-white">{user.username}</span>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-sm font-medium !text-blue-600 dark:!text-blue-400 hover:!text-blue-800 dark:hover:!text-blue-300 transition-colors !w-auto !bg-transparent hover:!bg-blue-50 dark:hover:!bg-blue-900 !p-1"
+                >
+                  Edit
+                </button>
+              </div>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Email
             </label>
-            <span className="text-gray-500 text-sm">{user.email}</span>
+            <span className="text-gray-500 dark:text-gray-400 text-sm">{user.email}</span>
           </div>
         </div>
 
-        <hr className="my-4" />
+        <hr className="my-4 border-gray-200 dark:border-gray-700" />
 
-        {/* Logout Button - Fixed styling */}
+        {/* Logout Button */}
         <button
           onClick={onLogout}
-          className="w-full text-center px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+          className="w-full text-center px-3 py-2 bg-rose-400 text-white rounded-md hover:bg-rose-500 transition-colors"
         >
           Sign Out
         </button>

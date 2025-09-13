@@ -1,4 +1,4 @@
-// components/organisms/OuterNavBar.tsx
+// components/organisms/OuterNavBar.tsx - FIXED with dark mode support
 import ChangeThemeBtn from "../atoms/clickeable/ChangeThemeBtn";
 import LinesBtn from "../atoms/clickeable/LinesBtn";
 import { signOut } from "firebase/auth";
@@ -28,7 +28,7 @@ const OuterNavBar = ({ toggleVisiblity }: { toggleVisiblity: () => void }) => {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
+    <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0">
       <div className="flex items-center justify-between w-full">
         {/* Left side - Menu button */}
         <div className="flex items-center justify-start min-w-0">
@@ -43,12 +43,12 @@ const OuterNavBar = ({ toggleVisiblity }: { toggleVisiblity: () => void }) => {
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors !text-gray-700 hover:!text-gray-900 !w-auto !bg-transparent hover:!bg-gray-100"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors !text-gray-700 dark:!text-gray-300 hover:!text-gray-900 dark:hover:!text-white !w-auto !bg-transparent"
             >
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
                 {user.username?.charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium !text-gray-700">{user.username}</span>
+              <span className="text-sm font-medium !text-gray-700 dark:!text-gray-300">{user.username}</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>

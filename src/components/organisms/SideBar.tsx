@@ -317,10 +317,10 @@ const SideBar = ({
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button
                 onClick={() => setCurrentView('ongoing')}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 !py-1 !px-2 rounded-md text-sm font-medium transition-colors ${
                   currentView === 'ongoing'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    ? '!bg-white dark:!bg-gray-700 !text-gray-900 dark:!text-white shadow-sm'
+                    : '!bg-transparent dark:!bg-transparent !text-gray-600 dark:!text-gray-200 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-50 dark:hover:!bg-gray-600'
                 }`}
                 type="button"
               >
@@ -328,10 +328,10 @@ const SideBar = ({
               </button>
               <button
                 onClick={() => setCurrentView('archived')}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 !py-1 !px-2 rounded-md text-sm font-medium transition-colors ${
                   currentView === 'archived'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    ? '!bg-white dark:!bg-gray-700 !text-gray-900 dark:!text-white shadow-sm'
+                    : '!bg-transparent dark:!bg-transparent !text-gray-600 dark:!text-gray-200 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-50 dark:hover:!bg-gray-600'
                 }`}
                 type="button"
               >
