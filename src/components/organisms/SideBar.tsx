@@ -1,5 +1,7 @@
-// SideBar component - Fixed positioning and button click issues
+// SideBar component - Complete fixed version with soft deletion
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "../../lib/store/store";
 
 interface ChatSession {
   id: string;
@@ -15,7 +17,6 @@ interface SideBarProps {
   currentSessionId?: string;
   onSessionSelect: (sessionId: string) => void;
   onNewChat: () => void;
-  onDeleteSession: (sessionId: string) => void;
 }
 
 const SideBar = ({
@@ -24,11 +25,13 @@ const SideBar = ({
   chatSessions,
   currentSessionId,
   onSessionSelect,
-  onNewChat,
-  onDeleteSession
+  onNewChat
 }: SideBarProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState<string>('');
+  
+  // Get user from Redux state
+  const user = useSelector((state: RootState) => state.user);
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);
@@ -44,23 +47,87 @@ const SideBar = ({
     }
   };
 
+  const handleSoftDelete = async (sessionId: string) => {
+    if (!user.userId) {
+      alert('User ID is missing. Please try logging out and back in.');
+      return;
+    }
+
+    // Show confirmation dialog
+    if (!confirm('Are you sure you want to delete this chat?')) {
+      return;
+    }
+    
+    console.log('Attempting to soft delete session:', { sessionId, userId: user.userId });
+    
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/chat/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: { 
+          'X-User-Id': user.userId.toString()
+        }
+      });
+      
+      console.log('Delete response status:', response.status);
+      
+      if (response.ok) {
+        console.log('Session marked as deleted successfully');
+        window.location.reload(); // Refresh to update the list
+      } else {
+        const errorText = await response.text();
+        console.error('Delete failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        alert(`Failed to delete chat: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Network error:', error);
+      alert(`Network error: ${errorMessage}`);
+    }
+  };
+
   const handleEditTitle = async (sessionId: string, newTitle: string) => {
     if (!newTitle.trim()) return;
+    
+    if (!user.userId) {
+      alert('User ID is missing. Please try logging out and back in.');
+      return;
+    }
+    
+    console.log('Attempting to update title:', { sessionId, newTitle: newTitle.trim(), userId: user.userId });
     
     try {
       const response = await fetch(`http://127.0.0.1:8000/chat/sessions/${sessionId}/title`, {
         method: 'PUT',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-User-Id': user.userId.toString()
         },
         body: JSON.stringify({ title: newTitle.trim() })
       });
       
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('Update successful:', responseData);
         window.location.reload();
+      } else {
+        const errorText = await response.text();
+        console.error('Update failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        alert(`Failed to update title: ${response.status} ${response.statusText}\n${errorText}`);
       }
     } catch (error) {
-      console.error('Failed to update title:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Network error:', error);
+      alert(`Network error: ${errorMessage}`);
     }
     
     setEditingId(null);
@@ -79,7 +146,7 @@ const SideBar = ({
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay - only show on mobile when sidebar is open */}
       {isVisible && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -87,31 +154,22 @@ const SideBar = ({
         ></div>
       )}
       
-      {/* Sidebar */}
+      {/* Sidebar - Fixed positioning logic */}
       <div
         className={`${
           isVisible ? "translate-x-0" : "-translate-x-full"
         } fixed top-0 left-0 h-full w-80 bg-white dark:bg-background2-dark border-r border-gray-300 dark:border-gray-700 shadow-lg z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:transform-none lg:translate-x-0 lg:shadow-none`}
       >
         <div className="flex flex-col h-full py-4 px-4 gap-4 overflow-y-auto">
-          {/* Header */}
+          {/* Header - No X button */}
           <div className="flex items-center justify-between w-full">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex-1">Chat History</h2>
-            <button
-              onClick={toggleVisiblity}
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors lg:hidden ml-2 flex-shrink-0 z-50"
-              type="button"
-            >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
           
           {/* New Chat Button */}
           <button
             onClick={onNewChat}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-2"
+            className="!w-full !bg-blue-500 !text-white py-2 px-4 rounded-lg hover:!bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-2"
             type="button"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,14 +218,14 @@ const SideBar = ({
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleEditTitle(session.id, editTitle)}
-                                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                                className="text-xs !bg-blue-500 !text-white px-2 py-1 rounded hover:!bg-blue-600 !w-auto"
                                 type="button"
                               >
                                 Save
                               </button>
                               <button
                                 onClick={cancelEditing}
-                                className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
+                                className="text-xs !bg-gray-300 !text-gray-700 px-2 py-1 rounded hover:!bg-gray-400 !w-auto"
                                 type="button"
                               >
                                 Cancel
@@ -188,7 +246,7 @@ const SideBar = ({
 
                       {editingId !== session.id && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {/* Edit Button */}
+                          {/* Edit Button - Fixed icon */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -199,14 +257,14 @@ const SideBar = ({
                             type="button"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="..." />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
                           {/* Delete Button */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDeleteSession(session.id);
+                              handleSoftDelete(session.id);
                             }}
                             className="p-1 rounded bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-300 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-700"
                             title="Delete chat"

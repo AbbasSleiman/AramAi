@@ -1,4 +1,4 @@
-// ChatPage component - Updated with User Authentication
+// ChatPage component - Fixed with local timestamps and typing effect
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../lib/store/store";
@@ -34,6 +34,19 @@ interface ChatSession {
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
+// Helper function to create local timestamp in ISO-like format
+const createLocalTimestamp = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
 const ChatPage = () => {
   const [sideBarOpened, setSideBarOpened] = useState<boolean>(false);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
@@ -41,11 +54,17 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Typing effect states
+  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  const [displayedText, setDisplayedText] = useState<string>('');
+  
   // Get user info from Redux
   const user = useSelector((state: RootState) => state.user);
   
-  // Refs for auto-scrolling
+  // Refs for auto-scrolling and typing effect
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,7 +72,7 @@ const ChatPage = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentSession?.messages]);
+  }, [currentSession?.messages, displayedText]);
 
   // Load chat sessions when user is available
   useEffect(() => {
@@ -62,8 +81,43 @@ const ChatPage = () => {
     }
   }, [user.userId]);
 
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSideBar = () => {
     setSideBarOpened((prev) => !prev);
+  };
+
+  // Typing effect function
+  const simulateTyping = (text: string, messageId: string, onComplete: () => void) => {
+    setIsTyping(true);
+    setTypingMessageId(messageId);
+    setDisplayedText('');
+    
+    let currentIndex = 0;
+    const typingSpeed = 30; // milliseconds per character (adjust for speed)
+    
+    const typeNextCharacter = () => {
+      if (currentIndex < text.length) {
+        setDisplayedText(text.substring(0, currentIndex + 1));
+        currentIndex++;
+        typingTimeoutRef.current = setTimeout(typeNextCharacter, typingSpeed);
+      } else {
+        // Typing complete
+        setIsTyping(false);
+        setTypingMessageId(null);
+        setDisplayedText('');
+        onComplete();
+      }
+    };
+    
+    typeNextCharacter();
   };
 
   // API Functions with user authentication
@@ -167,12 +221,15 @@ const ChatPage = () => {
       const prefix = type === 'translate' ? 'translate english to syriac: ' : 'continue in syriac: ';
       const fullInput = prefix + message;
 
+      // Create local timestamp - this ensures consistency and local time
+      const messageTimestamp = createLocalTimestamp();
+
       // Add user message to current session immediately
       const userMessage: Message = {
         id: Date.now().toString() + '_user',
         type: 'user',
         content: message,
-        timestamp: new Date().toISOString(),
+        timestamp: messageTimestamp,
         metadata: {
           input_type: type
         }
@@ -206,129 +263,185 @@ const ChatPage = () => {
       const aiData = await aiResponse.json();
       console.log('✅ AI Response:', aiData.output_text);
 
-      // Create assistant message
+      // Create assistant message with local timestamp
+      const assistantTimestamp = createLocalTimestamp();
       const assistantMessage: Message = {
         id: Date.now().toString() + '_assistant',
         type: 'assistant',
         content: aiData.output_text,
-        timestamp: new Date().toISOString(),
+        timestamp: assistantTimestamp,
         metadata: {
           input_type: type,
           generation_params: aiData.generation_params
         }
       };
 
-      // Save both messages to database
-      const saveResponse = await fetch(`${API_BASE_URL}/chat/sessions/${session.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Id': user.userId,
-        },
-        body: JSON.stringify({
-          messages: [userMessage, assistantMessage]
-        })
+      // Add empty assistant message first (for typing effect)
+      const emptyAssistantMessage = { ...assistantMessage, content: '' };
+      setCurrentSession(prev => prev ? {
+        ...prev,
+        messages: [...prev.messages, emptyAssistantMessage]
+      } : null);
+
+      setIsLoading(false);
+
+      // Start typing effect
+      simulateTyping(aiData.output_text, assistantMessage.id, async () => {
+        // After typing is complete, update with full message and save to database
+        setCurrentSession(prev => prev ? {
+          ...prev,
+          messages: prev.messages.map(msg => 
+            msg.id === assistantMessage.id ? assistantMessage : msg
+          )
+        } : null);
+
+        // Save both messages to database
+        try {
+          // Ensure user.userId is not null before making the request
+          if (!user.userId) {
+            console.error('User ID is null when trying to save messages');
+            setError('Authentication error. Please refresh the page.');
+            return;
+          }
+
+          const saveResponse = await fetch(`${API_BASE_URL}/chat/sessions/${session.id}/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-User-Id': user.userId, // Now TypeScript knows this is not null
+            },
+            body: JSON.stringify({
+              messages: [userMessage, assistantMessage]
+            })
+          });
+
+          if (saveResponse.ok) {
+            // Update the session in the list (but not messages to avoid timestamp refresh)
+            setChatSessions(prev => 
+              prev.map(s => s.id === session.id ? {
+                ...s,
+                title: s.title,
+                updated_at: createLocalTimestamp()
+              } : s)
+            );
+
+            console.log('✅ Messages saved to database');
+          } else {
+            setError('Failed to save messages');
+          }
+        } catch (saveError) {
+          console.error('Error saving messages:', saveError);
+          setError('Failed to save messages');
+        }
       });
-
-      if (saveResponse.ok) {
-        const updatedSession = await saveResponse.json();
-        setCurrentSession(updatedSession);
-        
-        // Update the session in the list
-        setChatSessions(prev => 
-          prev.map(s => s.id === updatedSession.id ? updatedSession : s)
-        );
-
-        console.log('✅ Messages saved to database');
-      } else {
-        setError('Failed to save messages');
-      }
 
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
+      setIsLoading(false);
       
       // Add error message to chat
       const errorMessage: Message = {
         id: Date.now().toString() + '_error',
         type: 'assistant',
         content: 'Sorry, I encountered an error while processing your request. Please try again.',
-        timestamp: new Date().toISOString()
+        timestamp: createLocalTimestamp()
       };
 
       setCurrentSession(prev => prev ? {
         ...prev,
         messages: [...prev.messages, errorMessage]
       } : null);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!user.userId) return;
-    
-    if (!confirm('Are you sure you want to delete this chat?')) return;
-    
+  // Handler for when a session is selected from sidebar
+  const handleSessionSelect = (sessionId: string) => {
+    // Stop any ongoing typing effect
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      setIsTyping(false);
+      setTypingMessageId(null);
+      setDisplayedText('');
+    }
+    loadSession(sessionId);
+  };
+
+  // Handler for creating new chat from sidebar
+  const handleNewChat = () => {
+    // Stop any ongoing typing effect
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      setIsTyping(false);
+      setTypingMessageId(null);
+      setDisplayedText('');
+    }
+    createNewSession();
+  };
+
+  const renderMessage = (message: Message) => {
+    // Simplified timestamp parsing since we're now using local timestamps
+    let messageDate: Date;
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-User-Id': user.userId,
-        },
-      });
+      // Parse the local timestamp directly
+      messageDate = new Date(message.timestamp);
       
-      if (response.ok) {
-        // Remove from local state
-        setChatSessions(prev => prev.filter(s => s.id !== sessionId));
-        
-        // If this was the current session, clear it
-        if (currentSession?.id === sessionId) {
-          setCurrentSession(null);
-        }
-        
-        console.log('✅ Session deleted:', sessionId);
-      } else {
-        setError('Failed to delete session');
+      // Fallback if parsing fails
+      if (isNaN(messageDate.getTime())) {
+        console.warn('Error parsing timestamp:', message.timestamp);
+        messageDate = new Date(); // Use current time as fallback
       }
     } catch (error) {
-      console.error('Failed to delete session:', error);
-      setError('Failed to delete session');
+      console.log(error)
+      console.warn('Error parsing timestamp:', message.timestamp);
+      messageDate = new Date(); // Use current time as fallback
     }
-  };
 
-  // Removed unused handleUpdateSessionTitle function
-  // Title updates are handled directly in the SideBar component
+    const localTime = messageDate.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    });
 
-  const renderMessage = (message: Message) => (
-    <div
-      key={message.id}
-      className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-    >
+    // Handle typing effect for assistant messages
+    const messageContent = (isTyping && typingMessageId === message.id) 
+      ? displayedText 
+      : message.content;
+
+    return (
       <div
-        className={`max-w-[70%] rounded-lg px-4 py-2 ${
-          message.type === 'user'
-            ? 'bg-blue-500 text-white ml-4'
-            : 'bg-gray-100 text-gray-900 mr-4'
-        }`}
+        key={message.id}
+        className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
       >
-        <div 
-          className={`text-sm ${message.type === 'assistant' ? 'font-mono text-lg' : ''}`} 
-          style={{direction: message.type === 'assistant' ? 'rtl' : 'ltr'}}
+        <div
+          className={`max-w-[70%] rounded-lg px-4 py-2 ${
+            message.type === 'user'
+              ? 'bg-blue-500 text-white ml-4'
+              : 'bg-gray-100 text-gray-900 mr-4'
+          }`}
         >
-          {message.content}
-        </div>
-        <div className="text-xs opacity-70 mt-1" style={{direction: 'ltr'}}>
-          {new Date(message.timestamp).toLocaleTimeString()}
-          {message.metadata?.input_type && (
-            <span className="ml-2 bg-opacity-20 bg-white px-1 rounded">
-              {message.metadata.input_type}
-            </span>
-          )}
+          <div 
+            className={`text-sm ${message.type === 'assistant' ? 'font-mono text-lg' : ''}`} 
+            style={{direction: message.type === 'assistant' ? 'rtl' : 'ltr'}}
+          >
+            {messageContent}
+            {/* Show typing cursor during typing effect */}
+            {isTyping && typingMessageId === message.id && (
+              <span className="animate-pulse">|</span>
+            )}
+          </div>
+          <div className="text-xs opacity-70 mt-1" style={{direction: 'ltr'}}>
+            {localTime}
+            {message.metadata?.input_type && (
+              <span className="ml-2 bg-opacity-20 bg-white px-1 rounded">
+                {message.metadata.input_type}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Show loading if user is not ready
   if (!user.is_auth || !user.userId) {
@@ -345,16 +458,15 @@ const ChatPage = () => {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* SideBar */}
-      <SideBar 
-        isVisible={sideBarOpened} 
+      <SideBar
+        isVisible={sideBarOpened}
         toggleVisiblity={handleSideBar}
         chatSessions={chatSessions}
         currentSessionId={currentSession?.id}
-        onSessionSelect={loadSession}
-        onNewChat={createNewSession}
-        onDeleteSession={handleDeleteSession}
+        onSessionSelect={handleSessionSelect}
+        onNewChat={handleNewChat}
       />
-      
+            
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen min-w-0">
         <OuterNavBar toggleVisiblity={handleSideBar} />
@@ -415,7 +527,7 @@ const ChatPage = () => {
             )}
             
             {/* Input Area */}
-            <InputChat onSubmit={sendMessage} isLoading={isLoading} />
+            <InputChat onSubmit={sendMessage} isLoading={isLoading || isTyping} />
           </>
         )}
       </div>
