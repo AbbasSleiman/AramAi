@@ -1,4 +1,4 @@
-// ChatPage component - Fixed with local timestamps and typing effect
+// ChatPage component - Fixed with local timestamps, typing effect, and archive functionality
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../lib/store/store";
@@ -29,6 +29,7 @@ interface ChatSession {
   title: string;
   created_at: string;
   updated_at: string;
+  state?: string; // Added for archive functionality: 'ongoing', 'archived', 'deleted'
   messages: Message[];
 }
 
@@ -90,8 +91,21 @@ const ChatPage = () => {
     };
   }, []);
 
+  // Monitor session state changes - handle archived sessions
+  useEffect(() => {
+    if (currentSession?.state === 'archived') {
+      handleArchivedSessionAccess();
+    }
+  }, [currentSession?.state]);
+
   const handleSideBar = () => {
     setSideBarOpened((prev) => !prev);
+  };
+
+  // Handle archived session access
+  const handleArchivedSessionAccess = () => {
+    setCurrentSession(null);
+    setError('This chat has been archived. Please select an active chat or start a new one.');
   };
 
   // Typing effect function
@@ -189,10 +203,22 @@ const ChatPage = () => {
           'X-User-Id': user.userId,
         },
       });
+      
       if (response.ok) {
         const session = await response.json();
+        
+        // Check if the session is archived
+        if (session.state === 'archived') {
+          handleArchivedSessionAccess();
+          return;
+        }
+        
         setCurrentSession(session);
         console.log('✅ Loaded session:', session.id, 'with', session.messages.length, 'messages');
+      } else if (response.status === 404) {
+        // Session might have been archived or deleted
+        setCurrentSession(null);
+        setError('This chat is no longer available. It may have been archived or deleted.');
       } else {
         console.error('Failed to load session');
         setError('Failed to load session');
@@ -206,6 +232,12 @@ const ChatPage = () => {
   const sendMessage = async (message: string, type: 'translate' | 'continue') => {
     if (!message.trim() || !user.userId) return;
 
+    // Check if current session is somehow archived
+    if (currentSession?.state === 'archived') {
+      setError('Cannot send messages to archived chats. Please restore the chat first.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -215,6 +247,13 @@ const ChatPage = () => {
       if (!session) {
         session = await createNewSession();
         if (!session) return;
+      }
+
+      // Double-check session is not archived before proceeding
+      if (session.state === 'archived') {
+        setError('Cannot send messages to archived chats. Please restore the chat first.');
+        setIsLoading(false);
+        return;
       }
 
       // Prepare the input text with the appropriate prefix
@@ -491,6 +530,17 @@ const ChatPage = () => {
           </div>
         ) : (
           <>
+            {/* Chat Header - Show archived status if applicable */}
+            {currentSession.state === 'archived' && (
+              <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex-shrink-0">
+                <div className="flex items-center justify-center">
+                  <span className="text-yellow-800 text-sm font-medium">
+                    📁 This chat is archived. You can view messages but cannot send new ones.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50 min-h-0">
               <div className="max-w-4xl mx-auto">
@@ -526,8 +576,10 @@ const ChatPage = () => {
               </div>
             )}
             
-            {/* Input Area */}
-            <InputChat onSubmit={sendMessage} isLoading={isLoading || isTyping} />
+            {/* Input Area - Hide if session is archived */}
+            {currentSession.state !== 'archived' && (
+              <InputChat onSubmit={sendMessage} isLoading={isLoading || isTyping} />
+            )}
           </>
         )}
       </div>
