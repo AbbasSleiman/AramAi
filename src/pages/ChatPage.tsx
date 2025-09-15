@@ -8,6 +8,7 @@ import InputChat from "../components/molecules/InputChat";
 import OuterNavBar from "../components/organisms/OuterNavBar";
 import SideBar from "../components/organisms/SideBar";
 
+import CopyButton from "../components/atoms/clickeable/CopyButton";
 // Types
 interface Message {
   id: string;
@@ -419,44 +420,45 @@ const ChatPage = () => {
   };
 
   const renderMessage = (message: Message) => {
-    // Simplified timestamp parsing since we're now using local timestamps
-    let messageDate: Date;
-    try {
-      // Parse the local timestamp directly
-      messageDate = new Date(message.timestamp);
-      
-      // Fallback if parsing fails
-      if (isNaN(messageDate.getTime())) {
-        console.warn('Error parsing timestamp:', message.timestamp);
-        messageDate = new Date(); // Use current time as fallback
-      }
-    } catch (error) {
-      console.log(error)
+  // Simplified timestamp parsing since we're now using local timestamps
+  let messageDate: Date;
+  try {
+    // Parse the local timestamp directly
+    messageDate = new Date(message.timestamp);
+    
+    // Fallback if parsing fails
+    if (isNaN(messageDate.getTime())) {
       console.warn('Error parsing timestamp:', message.timestamp);
       messageDate = new Date(); // Use current time as fallback
     }
+  } catch (error) {
+    console.log(error)
+    console.warn('Error parsing timestamp:', message.timestamp);
+    messageDate = new Date(); // Use current time as fallback
+  }
 
-    const localTime = messageDate.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const localTime = messageDate.toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
-    // Handle typing effect for assistant messages
-    const messageContent = (isTyping && typingMessageId === message.id) 
-      ? displayedText 
-      : message.content;
+  // Handle typing effect for assistant messages
+  const messageContent = (isTyping && typingMessageId === message.id) 
+    ? displayedText 
+    : message.content;
 
-    return (
-      <div
-        key={message.id}
-        className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-      >
+  return (
+    <div
+      key={message.id}
+      className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`max-w-[70%] ${message.type === 'user' ? 'ml-4' : 'mr-4'}`}>
         <div
-          className={`max-w-[70%] rounded-lg px-4 py-2 ${
+          className={`rounded-lg px-4 py-2 ${
             message.type === 'user'
-              ? 'bg-blue-500 dark:bg-blue-600 text-white ml-4'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 mr-4'
+              ? 'bg-blue-500 dark:bg-blue-600 text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
           }`}
         >
           <div 
@@ -471,16 +473,22 @@ const ChatPage = () => {
           </div>
           <div className="text-xs opacity-70 mt-1" style={{direction: 'ltr'}}>
             {localTime}
-            {message.metadata?.input_type && (
-              <span className="ml-2 bg-opacity-20 bg-white dark:bg-black px-1 rounded">
-                {message.metadata.input_type}
-              </span>
-            )}
           </div>
         </div>
+        
+        {/* Copy button under the message for both user and assistant messages */}
+        {!isTyping && typingMessageId !== message.id && (
+          <div className={`flex mt-1 ${message.type === 'user' ? 'justify-end' : 'justify-end'}`}>
+            <div className="w-fit">
+              <CopyButton text={message.content} />
+            </div>
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
+
 
   // Show loading if user is not ready
   if (!user.is_auth || !user.userId) {
