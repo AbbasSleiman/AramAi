@@ -2,7 +2,7 @@ import SignupContainer from "../components/molecules/SignupContainer";
 
 const SignUpPage = () => {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 px-4 !bg-white dark:!bg-background2-dark min-h-screen">
+    <div className="flex flex-col items-center justify-center gap-4 px-4 bg-white dark:bg-gray-900 min-h-screen">
       <SignupContainer />
     </div>
   );

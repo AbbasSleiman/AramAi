@@ -1,4 +1,4 @@
-// ChatPage component - Complete with dark mode support and PDF export
+// ChatPage component - Updated with reaction support
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../lib/store/store";
@@ -10,8 +10,9 @@ import SideBar from "../components/organisms/SideBar";
 
 import CopyButton from "../components/atoms/clickeable/CopyButton";
 import ExportButton from "../components/atoms/clickeable/ExportButton";
+import ReactionButtons from "../components/atoms/clickeable/ReactionButtons";
 
-// Types
+// Updated Types with reaction support
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -24,6 +25,7 @@ interface Message {
       num_beams: number;
     };
   };
+  reaction?: 'like' | 'dislike' | null; // Added reaction field
 }
 
 interface ChatSession {
@@ -127,6 +129,49 @@ const ChatPage = () => {
   const handleArchivedSessionAccess = () => {
     setCurrentSession(null);
     setError('This chat has been archived. Please select an active chat or start a new one.');
+  };
+
+  // Reaction update handler
+  const handleReactionUpdate = async (messageId: string, reaction: 'like' | 'dislike' | null) => {
+    if (!user.userId) {
+      console.error('User ID is missing for reaction update');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/messages/${messageId}/reaction`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.userId,
+        },
+        body: JSON.stringify({ reaction }),
+      });
+
+      if (response.ok) {
+        console.log('Reaction updated successfully');
+        
+        // Update the message in currentSession
+        setCurrentSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: prev.messages.map(message => 
+              message.id === messageId 
+                ? { ...message, reaction } 
+                : message
+            )
+          };
+        });
+      } else {
+        const errorData = await response.text();
+        console.error('Failed to update reaction:', errorData);
+        throw new Error(`Failed to update reaction: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error updating reaction:', error);
+      setError('Failed to update reaction. Please try again.');
+    }
   };
 
   // Typing effect function
@@ -333,7 +378,8 @@ const ChatPage = () => {
         metadata: {
           input_type: type,
           generation_params: aiData.generation_params
-        }
+        },
+        reaction: null // Initialize with no reaction
       };
 
       // Add empty assistant message first (for typing effect)
@@ -439,76 +485,87 @@ const ChatPage = () => {
     createNewSession();
   };
 
-  const renderMessage = (message: Message) => {
-    // Simplified timestamp parsing since we're now using local timestamps
-    let messageDate: Date;
-    try {
-      // Parse the local timestamp directly
-      messageDate = new Date(message.timestamp);
-      
-      // Fallback if parsing fails
-      if (isNaN(messageDate.getTime())) {
-        console.warn('Error parsing timestamp:', message.timestamp);
-        messageDate = new Date(); // Use current time as fallback
-      }
-    } catch (error) {
-      console.log(error)
+const renderMessage = (message: Message) => {
+  // Simplified timestamp parsing since we're now using local timestamps
+  let messageDate: Date;
+  try {
+    // Parse the local timestamp directly
+    messageDate = new Date(message.timestamp);
+    
+    // Fallback if parsing fails
+    if (isNaN(messageDate.getTime())) {
       console.warn('Error parsing timestamp:', message.timestamp);
       messageDate = new Date(); // Use current time as fallback
     }
+  } catch (error) {
+    console.log(error)
+    console.warn('Error parsing timestamp:', message.timestamp);
+    messageDate = new Date(); // Use current time as fallback
+  }
 
-    const localTime = messageDate.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const localTime = messageDate.toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
-    // Handle typing effect for assistant messages
-    const messageContent = (isTyping && typingMessageId === message.id) 
-      ? displayedText 
-      : message.content;
+  // Handle typing effect for assistant messages
+  const messageContent = (isTyping && typingMessageId === message.id) 
+    ? displayedText 
+    : message.content;
 
-    return (
-      <div
-        key={message.id}
-        className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-      >
-        <div className={`max-w-[70%] ${message.type === 'user' ? 'ml-4' : 'mr-4'}`}>
-          <div
-            className={`rounded-lg px-4 py-2 ${
-              message.type === 'user'
-                ? 'bg-blue-500 dark:bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-            }`}
+  return (
+    <div
+      key={message.id}
+      className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`max-w-[70%] ${message.type === 'user' ? 'ml-4' : 'mr-4'}`}>
+        <div
+          className={`rounded-lg px-4 py-2 ${
+            message.type === 'user'
+              ? 'bg-blue-500 dark:bg-blue-600 text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+          }`}
+        >
+          <div 
+            className={`text-sm ${message.type === 'assistant' ? 'font-mono text-lg' : ''}`} 
+            style={{direction: message.type === 'assistant' ? 'rtl' : 'ltr'}}
           >
-            <div 
-              className={`text-sm ${message.type === 'assistant' ? 'font-mono text-lg' : ''}`} 
-              style={{direction: message.type === 'assistant' ? 'rtl' : 'ltr'}}
-            >
-              {messageContent}
-              {/* Show typing cursor during typing effect */}
-              {isTyping && typingMessageId === message.id && (
-                <span className="animate-pulse">|</span>
+            {messageContent}
+            {/* Show typing cursor during typing effect */}
+            {isTyping && typingMessageId === message.id && (
+              <span className="animate-pulse">|</span>
+            )}
+          </div>
+          <div className="text-xs opacity-70 mt-1" style={{direction: 'ltr'}}>
+            {localTime}
+          </div>
+        </div>
+        
+        {/* Buttons container - Fixed layout */}
+        {!isTyping && typingMessageId !== message.id && (
+          <div className="flex mt-1 justify-between items-center">
+            {/* Left side - Reaction buttons (only for assistant messages) */}
+            <div className="flex-none">
+              {message.type === 'assistant' && currentSession?.state !== 'archived' && (
+                <ReactionButtons
+                  messageId={message.id}
+                  currentReaction={message.reaction}
+                  onReactionChange={handleReactionUpdate}
+                />
               )}
             </div>
-            <div className="text-xs opacity-70 mt-1" style={{direction: 'ltr'}}>
-              {localTime}
+            
+            {/* Right side - Copy button (for all messages) */}
+            <div className="flex-none">
+              <CopyButton text={message.content} />
             </div>
           </div>
-          
-          {/* Copy button under the message for both user and assistant messages */}
-          {!isTyping && typingMessageId !== message.id && (
-            <div className={`flex mt-1 ${message.type === 'user' ? 'justify-end' : 'justify-end'}`}>
-              <div className="w-fit">
-                <CopyButton text={message.content} />
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
-    );
-  };
-
+    </div>
+  );
+};
   // Show loading if user is not ready
   if (!user.is_auth || !user.userId) {
     return (
