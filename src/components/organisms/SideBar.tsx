@@ -1,4 +1,4 @@
-// Fixed SideBar component - Remove lg:hidden to show overlay on all screen sizes
+// Updated SideBar component with complete search functionality
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../lib/store/store";
@@ -33,6 +33,7 @@ const SideBar = ({
   const [currentView, setCurrentView] = useState<'ongoing' | 'archived'>('ongoing');
   const [archivedSessions, setArchivedSessions] = useState<ChatSession[]>([]);
   const [isLoadingArchives, setIsLoadingArchives] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Get user from Redux state
   const user = useSelector((state: RootState) => state.user);
@@ -274,10 +275,46 @@ const SideBar = ({
   };
 
   const getCurrentSessions = () => {
-    return currentView === 'ongoing' ? chatSessions : archivedSessions;
+    const sessions = currentView === 'ongoing' ? chatSessions : archivedSessions;
+    
+    if (!searchQuery.trim()) {
+      return sessions;
+    }
+    
+    return sessions.filter(session => 
+      session.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   };
-
+// Function to highlight matching text
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      return text;
+    }
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => {
+      if (regex.test(part)) {
+        return (
+          <span key={index} className="!bg-yellow-200 dark:!bg-yellow-600 !text-gray-900 dark:!text-white">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+  
   const getEmptyMessage = () => {
+    // If there's a search query and no results, show "No matching results"
+    if (searchQuery.trim() && getCurrentSessions().length === 0) {
+      return {
+        primary: "No matching results",
+        secondary: `Try searching with different keywords`
+      };
+    }
+    
     if (currentView === 'ongoing') {
       return {
         primary: "No chats yet",
@@ -293,7 +330,7 @@ const SideBar = ({
 
   return (
     <>
-      {/* Overlay - FIXED: Removed lg:hidden so it shows on all screen sizes */}
+      {/* Overlay - shows on all screen sizes */}
       {isVisible && (
         <div 
           className="fixed inset-0 bg-black z-40"
@@ -302,7 +339,7 @@ const SideBar = ({
         ></div>
       )}
       
-      {/* Sidebar - Fixed positioning logic */}
+      {/* Sidebar */}
       <div
         className={`${
           isVisible ? "translate-x-0" : "-translate-x-full"
@@ -317,7 +354,7 @@ const SideBar = ({
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button
                 onClick={() => setCurrentView('ongoing')}
-                className={`flex-1 !py-1 !px-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                   currentView === 'ongoing'
                     ? '!bg-white dark:!bg-gray-700 !text-gray-900 dark:!text-white shadow-sm'
                     : '!bg-transparent dark:!bg-transparent !text-gray-600 dark:!text-gray-200 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-50 dark:hover:!bg-gray-600'
@@ -328,7 +365,7 @@ const SideBar = ({
               </button>
               <button
                 onClick={() => setCurrentView('archived')}
-                className={`flex-1 !py-1 !px-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                   currentView === 'archived'
                     ? '!bg-white dark:!bg-gray-700 !text-gray-900 dark:!text-white shadow-sm'
                     : '!bg-transparent dark:!bg-transparent !text-gray-600 dark:!text-gray-200 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-50 dark:hover:!bg-gray-600'
@@ -337,6 +374,25 @@ const SideBar = ({
               >
                 Archived ({archivedSessions.length})
               </button>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={`Search ${currentView} chats...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="!w-full !px-4 !py-2 !pl-10 !bg-white dark:!bg-gray-700 !border !border-gray-300 dark:!border-gray-600 !rounded-lg !text-sm !text-gray-900 dark:!text-white placeholder-gray-500 dark:placeholder-gray-400 focus:!outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500"
+              />
+              <svg 
+                className="!absolute !left-3 !top-1/2 !transform !-translate-y-1/2 !w-4 !h-4 !text-gray-400"
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
           </div>
           
@@ -422,7 +478,7 @@ const SideBar = ({
                           <>
                             <div className="flex items-center gap-2">
                               <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {session.title}
+                                {highlightText(session.title, searchQuery)}
                               </h3>
                               {currentView === 'archived' && (
                                 <span className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
