@@ -12,8 +12,12 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.0",
     "@tailwindcss/vite": "^4.1.4",
+    "@types/html2canvas": "^1.0.0",
+    "@types/jspdf": "^2.0.0",
     "aramai": "file:",
     "firebase": "^11.10.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-redux": "^9.2.0",

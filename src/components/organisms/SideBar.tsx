@@ -85,6 +85,7 @@ const SideBar = ({
     if (currentView === 'archived') {
       loadArchivedSessions();
     }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView, user.userId]);
 
   const handleSoftDelete = async (sessionId: string) => {
