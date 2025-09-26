@@ -1,4 +1,4 @@
-// ChatPage component - Updated with reaction support
+// ChatPage component - Updated to remove prefix logic and task type selection
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../lib/store/store";
@@ -12,20 +12,19 @@ import CopyButton from "../components/atoms/clickeable/CopyButton";
 import ExportButton from "../components/atoms/clickeable/ExportButton";
 import ReactionButtons from "../components/atoms/clickeable/ReactionButtons";
 
-// Updated Types with reaction support
+// Updated Types - removed input_type from metadata
 interface Message {
   id: string;
   type: 'user' | 'assistant';
   content: string;
   timestamp: string;
   metadata?: {
-    input_type?: 'translate' | 'continue';
     generation_params?: {
       max_new_tokens: number;
       num_beams: number;
     };
-  };
-  reaction?: 'like' | 'dislike' | null; // Added reaction field
+  }; // Removed input_type
+  reaction?: 'like' | 'dislike' | null;
 }
 
 interface ChatSession {
@@ -34,7 +33,7 @@ interface ChatSession {
   title: string;
   created_at: string;
   updated_at: string;
-  state?: string; // Added for archive functionality: 'ongoing', 'archived', 'deleted'
+  state?: string;
   messages: Message[];
 }
 
@@ -102,7 +101,7 @@ const ChatPage = () => {
     if (user.userId) {
       loadChatSessions();
     }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.userId]);
 
   // Cleanup typing timeout on unmount
@@ -295,7 +294,8 @@ const ChatPage = () => {
     }
   };
 
-  const sendMessage = async (message: string, type: 'translate' | 'continue') => {
+  // UPDATED: Remove task type parameter and prefix logic
+  const sendMessage = async (message: string) => {
     if (!message.trim() || !user.userId) return;
 
     // Check if current session is somehow archived
@@ -322,10 +322,6 @@ const ChatPage = () => {
         return;
       }
 
-      // Prepare the input text with the appropriate prefix
-      const prefix = type === 'translate' ? 'translate english to syriac: ' : 'continue in syriac: ';
-      const fullInput = prefix + message;
-
       // Create local timestamp - this ensures consistency and local time
       const messageTimestamp = createLocalTimestamp();
 
@@ -335,9 +331,7 @@ const ChatPage = () => {
         type: 'user',
         content: message,
         timestamp: messageTimestamp,
-        metadata: {
-          input_type: type
-        }
+        // Remove metadata with input_type
       };
 
       // Update UI immediately with user message
@@ -346,17 +340,18 @@ const ChatPage = () => {
         messages: [...prev.messages, userMessage]
       } : null);
 
-      console.log('🤖 Sending to AI:', fullInput);
-
+      // Send direct input to AI model (no prefix)
+      console.log('🤖 Sending to AI:', message);
+      const estimatedTokens = Math.round(Math.max(150, message.length * 2.5));
       // Send to AI model
       const aiResponse = await fetch(`${API_BASE_URL}/generate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json; charset=utf-8'  // Add charset
         },
         body: JSON.stringify({
-          input_text: fullInput,
-          max_new_tokens: 96,
+          input_text: message,
+          max_new_tokens: estimatedTokens,
           num_beams: 2
         })
       });
@@ -376,9 +371,8 @@ const ChatPage = () => {
         content: aiData.output_text,
         timestamp: assistantTimestamp,
         metadata: {
-          input_type: type,
           generation_params: aiData.generation_params
-        },
+        }, // Remove input_type
         reaction: null // Initialize with no reaction
       };
 
@@ -414,7 +408,7 @@ const ChatPage = () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-User-Id': user.userId, // Now TypeScript knows this is not null
+              'X-User-Id': user.userId,
             },
             body: JSON.stringify({
               messages: [userMessage, assistantMessage]
@@ -566,6 +560,7 @@ const renderMessage = (message: Message) => {
     </div>
   );
 };
+
   // Show loading if user is not ready
   if (!user.is_auth || !user.userId) {
     return (
@@ -603,7 +598,7 @@ const renderMessage = (message: Message) => {
               Ancient Wisdom. Modern Intelligence.
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Welcome {user.username}! Start a conversation to translate or continue text in Syriac.
+              Welcome {user.username}! Start a conversation in English or Syriac.
             </p>
             <button
               onClick={createNewSession}

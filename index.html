@@ -2,13 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./logo.svg" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Aram AI</title>
+    <link rel="icon" type="image/svg+xml" href="./logo.svg" id="favicon" />
     <script>
       const savedTheme = localStorage.getItem("theme") || "light";
       document.documentElement.setAttribute("data-theme", savedTheme);
+      
+      // Set initial favicon based on theme
+      const favicon = document.getElementById("favicon");
+      if (savedTheme === "dark") {
+        favicon.href = "./logo_dark.svg";
+      } else {
+        favicon.href = "./logo.svg";
+      }
+      
+      // Function to update favicon when theme changes
+      window.updateFavicon = function(theme) {
+        const favicon = document.getElementById("favicon");
+        if (theme === "dark") {
+          favicon.href = "./logo_dark.svg";
+        } else {
+          favicon.href = "./logo.svg";
+        }
+      };
     </script>
   </head>
   <body>

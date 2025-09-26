@@ -1,19 +1,18 @@
-// InputChat component - Complete with full dark mode support
 import { useState } from "react";
 import InputField from "../atoms/InputField";
 
 interface InputChatProps {
-  onSubmit: (message: string, taskType: 'translate' | 'continue') => void;
+  onSubmit: (message: string) => void; // Remove taskType parameter
   isLoading: boolean;
 }
 
 const InputChat = ({ onSubmit, isLoading }: InputChatProps) => {
   const [inputText, setInputText] = useState<string>('');
-  const [taskType, setTaskType] = useState<'translate' | 'continue'>('translate');
+  // Remove taskType state completely
 
   const handleSubmit = () => {
     if (inputText.trim() && !isLoading) {
-      onSubmit(inputText, taskType);
+      onSubmit(inputText); // Just pass the message, no task type
       setInputText('');
     }
   };
@@ -112,85 +111,13 @@ const InputChat = ({ onSubmit, isLoading }: InputChatProps) => {
             white-space: nowrap !important;
             border: none !important;
           }
-          
-          /* Custom radio button styles for dark mode */
-          .radio-custom {
-            appearance: none !important;
-            width: 20px !important;
-            height: 20px !important;
-            border: 2px solid #d1d5db !important;
-            border-radius: 50% !important;
-            position: relative !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease-in-out !important;
-            background-color: #ffffff !important;
-          }
-          
-          .dark .radio-custom {
-            border-color: #4b5563 !important;
-            background-color: #374151 !important;
-          }
-          
-          .radio-custom:checked {
-            border-color: #3b82f6 !important;
-            background-color: #3b82f6 !important;
-          }
-          
-          .radio-custom:checked::after {
-            content: '' !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 8px !important;
-            height: 8px !important;
-            background-color: white !important;
-            border-radius: 50% !important;
-          }
-          
-          .radio-custom:hover {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-          }
-          
-          .dark .radio-custom:hover {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
-          }
         `}
       </style>
       
       <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-6 flex-shrink-0">
         <div className="max-w-4xl mx-auto w-full">
           <div className="space-y-6">
-            {/* Task Type Selector with improved dark mode */}
-            <div className="flex gap-8 justify-center">
-              <label className="flex items-center cursor-pointer group">
-                <input
-                  type="radio"
-                  value="translate"
-                  checked={taskType === 'translate'}
-                  onChange={(e) => setTaskType(e.target.value as 'translate')}
-                  className="radio-custom mr-3"
-                  disabled={isLoading}
-                />
-                <span className="text-base font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  English → Syriac
-                </span>
-              </label>
-              <label className="flex items-center cursor-pointer group">
-                <input
-                  type="radio"
-                  value="continue"
-                  checked={taskType === 'continue'}
-                  onChange={(e) => setTaskType(e.target.value as 'continue')}
-                  className="radio-custom mr-3"
-                  disabled={isLoading}
-                />
-                <span className="text-base font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Continue Syriac
-                </span>
-              </label>
-            </div>
+            {/* Remove the task type selector completely */}
             
             {/* Input Field with proper flex layout and dark mode */}
             <div className="flex gap-3 w-full items-end">
@@ -198,11 +125,7 @@ const InputChat = ({ onSubmit, isLoading }: InputChatProps) => {
                 <InputField
                   type="text"
                   name="message"
-                  placeholder={
-                    taskType === 'translate' 
-                      ? "Enter English text to translate..." 
-                      : "Enter Syriac text to continue..."
-                  }
+                  placeholder="Enter your message (English or Syriac)..." // Updated placeholder
                   value={inputText}
                   on_change={(e) => setInputText(e.target.value)}
                   classname="enhanced-input-override"
