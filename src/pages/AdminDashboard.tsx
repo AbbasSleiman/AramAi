@@ -4,6 +4,8 @@ import { RootState } from "../lib/store/store";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/atoms/Logo";
 import ChangeThemeBtn from "../components/atoms/clickeable/ChangeThemeBtn";
+import { signOut } from "firebase/auth";
+import { auth } from "../lib/firebase/firebaseConfig";
 
 interface DashboardStats {
   total_users: number;
@@ -128,6 +130,12 @@ const AdminDashboard = () => {
     }
   }, [user.userId]);
 
+    const handleRefresh = () => {
+    loadDashboardStats();
+    loadRatingsDistribution();
+    loadRecentFeedback();
+  };
+
   useEffect(() => {
     if (!user.userId) {
       navigate("/login");
@@ -138,11 +146,16 @@ const AdminDashboard = () => {
     loadRecentFeedback();
   }, [user.userId, navigate, loadDashboardStats, loadRatingsDistribution, loadRecentFeedback]);
 
-  const handleLogout = () => {
-    // Implement logout logic
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      // Sign out from Firebase
+      await signOut(auth);
+      // Navigate to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
-
   const StatCard = ({
     title,
     value,
@@ -224,17 +237,37 @@ const AdminDashboard = () => {
                 Admin Dashboard
               </h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <ChangeThemeBtn />
               <button
+                onClick={handleRefresh}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2 whitespace-nowrap"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span>Refresh Data</span>
+              </button>
+              
+              <button
                 onClick={() => navigate("/chat")}
-                className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 whitespace-nowrap"
               >
                 Go to Chat
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600 whitespace-nowrap"
               >
                 Logout
               </button>
@@ -525,33 +558,6 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Refresh Button */}
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => {
-              loadDashboardStats();
-              loadRatingsDistribution();
-              loadRecentFeedback();
-            }}
-            className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            Refresh Data
-          </button>
         </div>
       </div>
     </div>
