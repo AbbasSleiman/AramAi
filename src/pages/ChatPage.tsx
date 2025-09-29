@@ -11,8 +11,17 @@ import SideBar from "../components/organisms/SideBar";
 import CopyButton from "../components/atoms/clickeable/CopyButton";
 import ExportButton from "../components/atoms/clickeable/ExportButton";
 import ReactionButtons from "../components/atoms/clickeable/ReactionButtons";
+import MessageRating from "../components/atoms/clickeable/MessageRating";
 
 // Updated Types - removed input_type from metadata
+interface FeedbackData {
+  avg_rating: number | null;
+  comments_count: number;
+  user_rating: number | null;
+  user_comment?: string | null;
+}
+
+
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -23,8 +32,12 @@ interface Message {
       max_new_tokens: number;
       num_beams: number;
     };
-  }; // Removed input_type
+  };
   reaction?: 'like' | 'dislike' | null;
+  input_tokens?: number | null;  // Add these
+  output_tokens?: number | null;
+  generation_time_ms?: number | null;
+  feedbackSummary?: FeedbackData;
 }
 
 interface ChatSession {
@@ -173,6 +186,107 @@ const ChatPage = () => {
     }
   };
 
+  // Rating and comment handler
+  const handleRatingSubmit = async (messageId: string, rating: number, comment: string, feedbackType: string) => {
+    if (!user.userId) {
+      console.error('User ID is missing for rating submission');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/messages/${messageId}/comment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.userId,
+        },
+        body: JSON.stringify({ 
+          rating, 
+          comment: comment || null,
+          feedback_type: feedbackType 
+        }),
+      });
+
+      if (response.ok) {
+        console.log('Rating submitted successfully');
+
+        // Update local UI immediately (user's own rating/comment)
+        setCurrentSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: prev.messages.map(m => {
+              if (m.id !== messageId) return m;
+              const prevCount = m.feedbackSummary?.comments_count ?? 0;
+              const hadComment = (m.feedbackSummary?.user_comment?.trim()?.length ?? 0) > 0;
+              const willHaveComment = (comment?.trim()?.length ?? 0) > 0;
+              const nextCount = prevCount + (willHaveComment && !hadComment ? 1 : 0);
+              return {
+                ...m,
+                feedbackSummary: {
+                  avg_rating: m.feedbackSummary?.avg_rating ?? rating, // temp optimistic
+                  comments_count: nextCount,
+                  user_rating: rating,
+                  user_comment: comment || null,
+                }
+              };
+            })
+          };
+        });
+
+        // Refresh feedback summary from backend (to get accurate avg/count)
+        await refreshMessageFeedback(messageId);
+      } else {
+        const errorData = await response.text();
+        console.error('Failed to submit rating:', errorData);
+        throw new Error(`Failed to submit rating: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      setError('Failed to submit rating. Please try again.');
+    }
+  };
+
+  // Fetch feedback summary for a single message
+  const refreshMessageFeedback = async (messageId: string) => {
+    if (!user.userId) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/chat/messages/${messageId}/feedback`, {
+        headers: {
+          'X-User-Id': user.userId,
+        },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      // Expected shape:
+      // { avg_rating: number|null, comments_count: number, user_rating: number|null, user_comment?: string|null }
+
+      setCurrentSession(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: prev.messages.map(m =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  feedbackSummary: {
+                    avg_rating: data?.avg_rating ?? null,
+                    comments_count: data?.comments_count ?? 0,
+                    user_rating: data?.user_rating ?? null,
+                    user_comment: data?.user_comment ?? null,
+                  }
+                }
+              : m
+          )
+        };
+      });
+    } catch (e) {
+      console.warn('Failed to refresh message feedback', e);
+    }
+  };
+
   // Typing effect function
   const simulateTyping = (text: string, messageId: string, onComplete: () => void) => {
     setIsTyping(true);
@@ -270,7 +384,7 @@ const ChatPage = () => {
       });
       
       if (response.ok) {
-        const session = await response.json();
+        const session: ChatSession = await response.json();
         
         // Check if the session is archived
         if (session.state === 'archived') {
@@ -278,8 +392,11 @@ const ChatPage = () => {
           return;
         }
         
-        setCurrentSession(session);
-        console.log('✅ Loaded session:', session.id, 'with', session.messages.length, 'messages');
+        // Attach feedback summaries for assistant messages
+        const withFeedback = await hydrateFeedbackSummaries(session);
+        setCurrentSession(withFeedback);
+
+        console.log('✅ Loaded session:', withFeedback.id, 'with', withFeedback.messages.length, 'messages');
       } else if (response.status === 404) {
         // Session might have been archived or deleted
         setCurrentSession(null);
@@ -291,6 +408,61 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Error loading session:', error);
       setError('Error loading session');
+    }
+  };
+
+  // Fetch feedback summaries for all assistant messages in a session
+  const hydrateFeedbackSummaries = async (session: ChatSession): Promise<ChatSession> => {
+    if (!user.userId) return session;
+
+    const assistantMsgs = session.messages.filter(m => m.type === 'assistant');
+
+    try {
+      const results = await Promise.all(
+        assistantMsgs.map(async (m) => {
+          try {
+            const res = await fetch(`${API_BASE_URL}/chat/messages/${m.id}/feedback`, {
+              headers: { 'X-User-Id': user.userId! },
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return { id: m.id, data };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+const map = new Map<string, FeedbackData>();
+      results.forEach(r => {
+        if (r?.id) map.set(r.id, r.data);
+      });
+
+      return {
+        ...session,
+        messages: session.messages.map(m => {
+          if (m.type !== 'assistant') return m;
+          const d = map.get(m.id);
+          return {
+            ...m,
+            feedbackSummary: d
+              ? {
+                  avg_rating: d?.avg_rating ?? null,
+                  comments_count: d?.comments_count ?? 0,
+                  user_rating: d?.user_rating ?? null,
+                  user_comment: d?.user_comment ?? null,
+                }
+              : {
+                  avg_rating: null,
+                  comments_count: 0,
+                  user_rating: null,
+                  user_comment: null,
+                }
+          };
+        })
+      };
+    } catch {
+      return session;
     }
   };
 
@@ -331,7 +503,9 @@ const ChatPage = () => {
         type: 'user',
         content: message,
         timestamp: messageTimestamp,
-        // Remove metadata with input_type
+        input_tokens: Math.max(1, message.split(' ').length + Math.floor(message.length / 4)), // Add this
+        output_tokens: null,
+        generation_time_ms: null
       };
 
       // Update UI immediately with user message
@@ -372,8 +546,17 @@ const ChatPage = () => {
         timestamp: assistantTimestamp,
         metadata: {
           generation_params: aiData.generation_params
-        }, // Remove input_type
-        reaction: null // Initialize with no reaction
+        },
+        reaction: null,
+        input_tokens: null,
+        output_tokens: aiData.performance_metrics?.output_tokens || null, // Add this
+        generation_time_ms: aiData.performance_metrics?.generation_time_ms || null, // Add this
+        feedbackSummary: {
+          avg_rating: null,
+          comments_count: 0,
+          user_rating: null,
+          user_comment: null
+        }
       };
 
       // Add empty assistant message first (for typing effect)
@@ -418,7 +601,7 @@ const ChatPage = () => {
           if (saveResponse.ok) {
             // Update the session in the list (but not messages to avoid timestamp refresh)
             setChatSessions(prev => 
-              prev.map(s => s.id === session.id ? {
+              prev.map(s => s.id === session!.id ? {
                 ...s,
                 title: s.title,
                 updated_at: createLocalTimestamp()
@@ -426,6 +609,9 @@ const ChatPage = () => {
             );
 
             console.log('✅ Messages saved to database');
+
+            // Fetch feedback summary for the new assistant message (will be empty initially)
+            await refreshMessageFeedback(assistantMessage.id);
           } else {
             setError('Failed to save messages');
           }
@@ -483,18 +669,15 @@ const renderMessage = (message: Message) => {
   // Simplified timestamp parsing since we're now using local timestamps
   let messageDate: Date;
   try {
-    // Parse the local timestamp directly
     messageDate = new Date(message.timestamp);
-    
-    // Fallback if parsing fails
     if (isNaN(messageDate.getTime())) {
       console.warn('Error parsing timestamp:', message.timestamp);
-      messageDate = new Date(); // Use current time as fallback
+      messageDate = new Date();
     }
   } catch (error) {
     console.log(error)
     console.warn('Error parsing timestamp:', message.timestamp);
-    messageDate = new Date(); // Use current time as fallback
+    messageDate = new Date();
   }
 
   const localTime = messageDate.toLocaleTimeString([], { 
@@ -534,19 +717,28 @@ const renderMessage = (message: Message) => {
           <div className="text-xs opacity-70 mt-1" style={{direction: 'ltr'}}>
             {localTime}
           </div>
+          {/* REMOVED THE ENTIRE FEEDBACK SUMMARY SECTION */}
         </div>
         
         {/* Buttons container - Fixed layout */}
         {!isTyping && typingMessageId !== message.id && (
           <div className="flex mt-1 justify-between items-center">
-            {/* Left side - Reaction buttons (only for assistant messages) */}
-            <div className="flex-none">
+            {/* Left side - Reaction and Rating buttons (only for assistant messages) */}
+            <div className="flex items-center gap-1">
               {message.type === 'assistant' && currentSession?.state !== 'archived' && (
-                <ReactionButtons
-                  messageId={message.id}
-                  currentReaction={message.reaction}
-                  onReactionChange={handleReactionUpdate}
-                />
+                <>
+                  <ReactionButtons
+                    messageId={message.id}
+                    currentReaction={message.reaction}
+                    onReactionChange={handleReactionUpdate}
+                  />
+                  <MessageRating
+                    messageId={message.id}
+                    currentRating={message.feedbackSummary?.user_rating}
+                    currentComment={message.feedbackSummary?.user_comment || ""}
+                    onSubmit={handleRatingSubmit}
+                  />
+                </>
               )}
             </div>
             

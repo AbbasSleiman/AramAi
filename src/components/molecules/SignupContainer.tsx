@@ -10,6 +10,7 @@ import { auth } from "../../lib/firebase/firebaseConfig";
 import { useState } from "react";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
 import { useGoogleAuth } from "../../lib/hooks/useGoogleAuth";
+import { getUserByFirebaseUid, isUserAdmin } from "../../lib/api/userApi";
 
 const SignupContainer = () => {
   const { emailStatus, passwordStatus, validateForm } = useFormValidation();
@@ -33,7 +34,16 @@ const SignupContainer = () => {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       setStatus("done");
-      navigate("/chat");
+
+      // Route based on admin status
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        const localUser = await getUserByFirebaseUid(uid);
+        const admin = await isUserAdmin(localUser.id);
+        navigate(admin ? "/admin" : "/chat");
+      } else {
+        navigate("/chat");
+      }
     } catch (error) {
       setStatus("error");
       const firebaseError = error as AuthError;

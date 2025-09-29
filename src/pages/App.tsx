@@ -6,47 +6,42 @@ import LogInPage from "./LogInPage";
 import SignUpPage from "./SignUpPage";
 import ProtectedRoute from "../routes/ProtectedRoute";
 import AuthRedirectRoute from "../routes/AuthRedirectRoute";
+import AdminRoute from "../routes/AdminRoute"; // <-- ADD THIS import
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { AppDispacth } from "../lib/store/store";
+import { AppDispatch } from "../lib/store/store";
 import { useDispatch } from "react-redux";
 import { signInUser, signOutUser } from "../lib/store/slices/userSlice";
 import { auth } from "../lib/firebase/firebaseConfig";
 import { createOrGetUser } from "../lib/api/userApi";
+import AdminDashboard from "../pages/AdminDashboard";
 
 function App() {
-  const dispatch: AppDispacth = useDispatch();
+  const dispatch: AppDispatch = useDispatch();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
-          // Create/get user in local database FIRST
           const localUser = await createOrGetUser({
             firebase_uid: currentUser.uid,
-            email: currentUser.email || '',
-            username: currentUser.email?.split("@")[0] || '',
+            email: currentUser.email || "",
+            username: currentUser.email?.split("@")[0] || "",
           });
 
-          // Now dispatch with the ACTUAL username from database
           dispatch(
             signInUser({
               name: "",
-              username: localUser.username, // Use database username, not email-based
+              username: localUser.username,
               email: currentUser.email,
               uid: currentUser.uid,
-              userId: localUser.id, // Include userId directly
+              userId: localUser.id,
             })
           );
-
-          console.log('✅ User synced with local database:', localUser.id);
-          console.log('✅ Username from database:', localUser.username);
         } catch (error) {
-          console.error('❌ Failed to sync user with local database:', error);
-          
-          // Fallback: use email-based username if database fails
+          console.error("❌ Failed to sync user with local database:", error);
           dispatch(
             signInUser({
               name: "",
@@ -57,9 +52,7 @@ function App() {
           );
         }
       } else {
-        // User is signed out
         dispatch(signOutUser());
-        console.log('✅ User signed out, Redux state cleared');
       }
     });
 
@@ -70,7 +63,17 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<MainPage />} />
-        <Route path="chat" element={<ChatPage />} />
+
+        {/* Keep only the PROTECTED /chat route (remove the unprotected duplicate) */}
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/login"
           element={
@@ -87,14 +90,18 @@ function App() {
             </AuthRedirectRoute>
           }
         />
+
+        {/* Use AdminRoute here, not ProtectedRoute */}
         <Route
-          path="/chat"
+          path="/admin"
           element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
           }
         />
+
+        {/* Optionally add a 404 route later */}
         {/* <Route path="*" element={<_404Page />} /> */}
       </Routes>
     </Router>

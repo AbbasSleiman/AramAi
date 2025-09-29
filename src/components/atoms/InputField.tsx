@@ -1,18 +1,20 @@
-//InputField
+// InputField
 const InputField = ({
   type,
   name,
   placeholder,
   on_change,
   value,
-  classname,
+  classname = "",
+  disabled = false,
 }: {
   type: string;
   name: string;
-  placeholder: string;
+  placeholder?: string;
   on_change: React.ChangeEventHandler<HTMLInputElement>;
-  value: string | number | readonly string[] | undefined;
+  value?: string | number;
   classname?: string;
+  disabled?: boolean;
 }) => {
   return (
     <input
@@ -22,7 +24,8 @@ const InputField = ({
       placeholder={placeholder}
       onChange={on_change}
       value={value}
-      className={classname}
+      className={`${classname} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+      disabled={disabled}
     />
   );
 };

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
 import { useGoogleAuth } from "../../lib/hooks/useGoogleAuth";
 import LogoText from "../atoms/LogoText";
+import { createOrGetUser, isUserAdmin } from "../../lib/api/userApi";
 
 const LoginContainer = () => {
   const { emailStatus, passwordStatus, validateForm } = useFormValidation();
@@ -32,11 +33,27 @@ const LoginContainer = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setStatus("done");
-      navigate("/chat");
+
+      // After Firebase auth, ensure a local user row exists, then route by admin flag
+      const uid = auth.currentUser?.uid;
+      const emailNow = auth.currentUser?.email || email;
+
+      if (uid && emailNow) {
+        const localUser = await createOrGetUser({
+          firebase_uid: uid,
+          email: emailNow,
+          username: emailNow.split("@")[0],
+        });
+        const admin = await isUserAdmin(localUser.id);
+        navigate(admin ? "/admin" : "/chat");
+      } else {
+        // Fallback if uid missing
+        navigate("/chat");
+      }
     } catch (error) {
       setStatus("error");
       const firebaseError = error as AuthError;
-      console.error('Login error:', firebaseError.message);
+      console.error("Login error:", firebaseError.message);
     }
   };
 
@@ -162,6 +179,7 @@ const LoginContainer = () => {
               value={email}
               placeholder="Input your email"
               classname="login-input-override"
+              disabled={status === "loading"}
             />
           </div>
           <div className="w-full">
@@ -178,6 +196,7 @@ const LoginContainer = () => {
               value={password}
               placeholder="Input your Password"
               classname="login-input-override"
+              disabled={status === "loading"}
             />
           </div>
           
@@ -230,7 +249,7 @@ const LoginContainer = () => {
             src="/Google.svg"
             classname="mt-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 w-full px-6 py-2 rounded-md font-medium transition-colors"
             onClick={signInWithGoogle}
-            disabled={googleLoading}
+            disabled={googleLoading || status === "loading"}
           />
         </div>
       </div>

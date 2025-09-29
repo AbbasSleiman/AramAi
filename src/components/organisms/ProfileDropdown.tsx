@@ -1,9 +1,11 @@
-// components/organisms/ProfileDropdown.tsx - FIXED with dark mode support
+// components/organisms/ProfileDropdown.tsx - Updated with admin features
 import { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../lib/store/store";
 import { signInUser } from "../../lib/store/slices/userSlice";
 import useOutsideClick from "../../lib/hooks/useOutsideClick";
+import { useNavigate } from "react-router-dom";
+import { isUserAdmin } from "../../lib/api/userApi";
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -14,18 +16,37 @@ interface ProfileDropdownProps {
 const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) => {
   const user = useSelector((state: RootState) => state.user);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState(user.username);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useOutsideClick(dropdownRef, onClose, isOpen);
 
   useEffect(() => {
     setEditUsername(user.username);
   }, [user.username]);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user.userId) {
+        try {
+          const adminStatus = await isUserAdmin(user.userId);
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error('Failed to check admin status:', error);
+          setIsAdmin(false);
+        }
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user.userId]);
 
   const handleSaveProfile = async () => {
     if (!editUsername.trim() || !user.userId) {
@@ -56,7 +77,6 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
         const updatedUser = await response.json();
         console.log('Updated user:', updatedUser);
         
-        // Update Redux state - this should trigger re-render of all components using the username
         dispatch(signInUser({
           name: user.name,
           username: updatedUser.username,
@@ -67,9 +87,6 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
         
         setIsEditing(false);
         console.log('Profile updated successfully');
-        
-        // Remove the page reload - Redux state update should be sufficient
-        // The UI should automatically update due to Redux state change
         
       } else {
         const errorText = await response.text();
@@ -99,6 +116,11 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
     setError(null);
   };
 
+  const handleGoToDashboard = () => {
+    navigate('/admin');
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -112,9 +134,16 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
             {user.username?.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h3 className="font-medium text-gray-900 dark:text-white">{user.username}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+          <div className="flex-1 flex items-center gap-2">
+            <div>
+              <h3 className="font-medium text-gray-900 dark:text-white">{user.username}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+            </div>
+            {isAdmin && (
+              <span className="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 dark:text-green-100 dark:bg-green-800 rounded-md">
+                Admin
+              </span>
+            )}
           </div>
         </div>
 
@@ -180,13 +209,29 @@ const ProfileDropdown = ({ isOpen, onClose, onLogout }: ProfileDropdownProps) =>
 
         <hr className="my-4 border-gray-200 dark:border-gray-700" />
 
-        {/* Logout Button */}
-        <button
-          onClick={onLogout}
-          className="w-full text-center px-3 py-2 bg-rose-400 text-white rounded-md hover:bg-rose-500 transition-colors"
-        >
-          Sign Out
-        </button>
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {/* Admin Dashboard Button - Only show for admins */}
+          {isAdmin && (
+            <button
+              onClick={handleGoToDashboard}
+              className="w-full text-center px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Admin Dashboard
+            </button>
+          )}
+
+          {/* Logout Button */}
+          <button
+            onClick={onLogout}
+            className="w-full text-center px-3 py-2 bg-rose-400 text-white rounded-md hover:bg-rose-500 transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     </div>
   );
