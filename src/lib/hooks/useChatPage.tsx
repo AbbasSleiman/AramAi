@@ -5,7 +5,7 @@ import { API_BASE_URL } from "../api/config";
 import {
   createLocalTimestamp,
   formatRelativeTime,
-} from "../helpers/TimeFunctions";
+} from "../helpers/timeFunctions";
 
 export interface FeedbackData {
   avg_rating: number | null;

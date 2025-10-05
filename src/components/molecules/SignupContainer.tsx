@@ -22,7 +22,6 @@ const SignupContainer = () => {
   const {
     signInWithGoogle,
     isLoading: googleLoading,
-    error: googleError,
   } = useGoogleAuth();
 
   // utility

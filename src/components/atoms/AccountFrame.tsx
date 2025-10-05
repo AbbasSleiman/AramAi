@@ -1,6 +1,6 @@
 import { useSelector } from "react-redux";
 import { RootState } from "../../lib/store/store";
-import { Link, useNavigate } from "react-router-dom";
+import {  useNavigate } from "react-router-dom";
 import { useRef } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase/firebaseConfig";

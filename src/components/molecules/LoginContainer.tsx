@@ -24,7 +24,6 @@ const LoginContainer = () => {
   const {
     signInWithGoogle,
     isLoading: googleLoading,
-    error: googleError,
   } = useGoogleAuth();
 
   // utility
