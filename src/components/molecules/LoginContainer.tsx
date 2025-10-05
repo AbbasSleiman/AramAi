@@ -13,13 +13,19 @@ import { signInUser } from "../../lib/store/slices/userSlice";
 import { AppDispacth } from "../../lib/store/store";
 import { useDispatch } from "react-redux";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
-import useSignInWithGoogle from "../../lib/hooks/useSignInWithGoogle";
+import { useGoogleAuth } from "../../lib/hooks/useGoogleAuth";
+import { createOrGetUser, isUserAdmin } from "../../lib/api/user/user";
 
 const LoginContainer = () => {
   const auth = getAuth();
 
   // custom validation hook
   const { emailStatus, passwordStatus, validateForm } = useFormValidation();
+  const {
+    signInWithGoogle,
+    isLoading: googleLoading,
+    error: googleError,
+  } = useGoogleAuth();
 
   // utility
   const navigate = useNavigate();
@@ -52,8 +58,22 @@ const LoginContainer = () => {
         password
       );
 
-      setStatus("done");
-      navigate("/chat");
+      // After Firebase auth, ensure a local user row exists, then route by admin flag
+      const uid = userCredentials.user?.uid;
+      const emailNow = userCredentials.user?.email ?? email;
+
+      if (uid && emailNow) {
+        const localUser = await createOrGetUser({
+          firebase_uid: uid,
+          email: emailNow,
+          username: emailNow.split("@")[0],
+        });
+        const admin = await isUserAdmin(localUser.id);
+        navigate(admin ? "/admin" : "/chat");
+      } else {
+        // Fallback if uid missing
+        navigate("/chat");
+      }
     } catch (error: any) {
       setStatus("error");
     } finally {
@@ -156,10 +176,11 @@ const LoginContainer = () => {
 
       <div className="w-full">
         <StyledButton
-          onClick={useSignInWithGoogle}
           text="Continue With Google"
           src="/Google.svg"
           classname="mt-3"
+          onClick={signInWithGoogle}
+          disabled={googleLoading || status === "loading"}
         />
       </div>
     </div>

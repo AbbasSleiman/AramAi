@@ -7,6 +7,7 @@ import { auth } from "../../lib/firebase/firebaseConfig";
 
 import useOutsideClick from "../../lib/hooks/useOutsideClick";
 import ThinButton from "./clickeable/ThinButton";
+import NotificationBox from "./utilities/NotificationBox";
 
 const AccountFrame = ({
   isVisible,
@@ -26,7 +27,7 @@ const AccountFrame = ({
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate("/login");
+      navigate("/login")
     } catch (error) {}
   };
 
@@ -45,15 +46,12 @@ const AccountFrame = ({
       <hr className="dark:text-background opacity-25" />
       {/* General Links Container*/}
       <div className="flex flex-col gap-2">
-        <ThinButton text="Home Page" on_click={() => navigate("/")} />
-        <ThinButton
-          text="Terms & Condition"
-          on_click={() => navigate("/terms")}
-        />
+        <ThinButton text="Home Page" />
+        <ThinButton text="Terms & Condition" />
       </div>
       <hr className="dark:text-background opacity-25" />
-      {/* <NotificationBox text="Error Logging Out" classname="bg-red-500 text-text-dark"/> */}
-      <ThinButton text="logout" classname="error" on_click={handleLogout} />
+      <NotificationBox text="Error Logging Out" classname="bg-red-500 text-text-dark"/>
+      <ThinButton text="logout" classname="error" on_click={handleLogout}/>
     </div>
   );
 };

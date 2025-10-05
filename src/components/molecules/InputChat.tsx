@@ -1,30 +1,52 @@
+import { useState } from "react";
+import InputField from "../atoms/InputField";
 import SendBtn from "../atoms/clickeable/SendBtn";
-import { useRef, useEffect, useState } from "react";
 
-const ChatInput = () => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [text, setText] = useState("");
+interface InputChatProps {
+  onSubmit: (message: string) => void;
+  isLoading: boolean;
+}
 
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto"; // Reset height
-      textarea.style.height = `${textarea.scrollHeight}px`; // Adjust height
+const InputChat = ({ onSubmit, isLoading }: InputChatProps) => {
+  const [inputText, setInputText] = useState<string>("");
+
+  const handleSubmit = () => {
+    const msg = inputText.trim();
+    if (!msg || isLoading) return;
+    onSubmit(msg);
+    setInputText("");
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
     }
-  }, [text]);
+  };
 
   return (
-    <div className="flex flex-row gap-4 py-3 px-4 rounded-2xl w-full items-end justify-between input-chat-container overflow-auto">
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Ask Anything"
-        className="block max-h-60 h-10 w-full resize-none border-0 bg-transparent px-0 py-2 ring-0 overflow-y-auto focus:outline-none"
-      />
-      <SendBtn />
+    <div className="flex gap-3 ">
+      {/* Input */}
+      <div className="flex-1 min-w-0 " onKeyDown={handleKeyPress}>
+        <InputField
+          type="text"
+          name="message"
+          placeholder="Enter your message (English or Syriac)…"
+          value={inputText}
+          on_change={(e) => setInputText(e.target.value)}
+          classname="w-full bg-third dark:bg-background text-text dark:text-background-dark placeholder:text-text/60 dark:placeholder:text-text-dark/60"
+        />
+      </div>
+
+      {/* Send button */}
+      <SendBtn
+        onClick={handleSubmit}
+        disabled={!inputText.trim() || isLoading}
+        className="w-24"
+        type="button"
+      ></SendBtn>
     </div>
   );
 };
 
-export default ChatInput;
+export default InputChat;

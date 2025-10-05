@@ -17,7 +17,7 @@ const ChangeThemeBtn = () => {
   };
 
   return (
-    <div onClick={handleToggleTheme} className="clickeable hoverable-box cursor-pointer w-fit">
+    <div onClick={handleToggleTheme} className="clickeable">
       {theme === "light" ? (
         <svg
           width="24"

@@ -4,8 +4,6 @@ import StyledButton from "../atoms/clickeable/StyledButton";
 
 import {
   createUserWithEmailAndPassword,
-  getAuth,
-  GoogleAuthProvider,
   onAuthStateChanged,
 } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
@@ -15,11 +13,17 @@ import { signInUser } from "../../lib/store/slices/userSlice";
 import { AppDispacth } from "../../lib/store/store";
 import { useDispatch } from "react-redux";
 import { useFormValidation } from "../../lib/hooks/useFormValidation";
-import useSignInWithGoogle from "../../lib/hooks/useSignInWithGoogle";
+import { getUserByFirebaseUid, isUserAdmin } from "../../lib/api/user/user";
+import { useGoogleAuth } from "../../lib/hooks/useGoogleAuth";
 
 const SignupContainer = () => {
   // custom validation hook
   const { emailStatus, passwordStatus, validateForm } = useFormValidation();
+  const {
+    signInWithGoogle,
+    isLoading: googleLoading,
+    error: googleError,
+  } = useGoogleAuth();
 
   // utility
   const navigate = useNavigate();
@@ -52,8 +56,16 @@ const SignupContainer = () => {
         password
       );
 
-      setStatus("done");
-      navigate("/chat");
+      const uid = userCredentials.user?.uid;
+      if (uid) {
+        const localUser = await getUserByFirebaseUid(uid);
+        const admin = await isUserAdmin(localUser.id);
+
+        console.log(localUser, " ", admin);
+        navigate(admin ? "/admin" : "/chat");
+      } else {
+        navigate("/chat");
+      }
     } catch (error: any) {
       setStatus("error");
     } finally {
@@ -160,10 +172,11 @@ const SignupContainer = () => {
 
       <div className="w-full">
         <StyledButton
-          onClick={useSignInWithGoogle}
+          onClick={signInWithGoogle}
           text="Continue With Google"
           src="/Google.svg"
           classname="mt-3"
+          disabled={googleLoading}
         />
       </div>
     </div>
