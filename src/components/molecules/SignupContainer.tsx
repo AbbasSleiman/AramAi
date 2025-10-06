@@ -39,7 +39,7 @@ const SignupContainer = () => {
   const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     setStatus("loading");
 
-    event.preventDefault();
+    event.preventDefault(); 
 
     // Validation logic
     if (!validateForm(email, password)) {

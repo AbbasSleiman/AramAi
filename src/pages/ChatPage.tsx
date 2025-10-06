@@ -12,6 +12,7 @@ import { RootState } from "../lib/store/store";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 12 },
@@ -143,18 +144,9 @@ const ChatPage = () => {
     );
   };
 
-  // Loading screen while we don’t know the user yet
+  // // Loading screen while we don’t know the user yet
   if (!user.is_auth || !user.db_id) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background dark:bg-background-dark">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-text dark:text-text-dark">
-            Setting up your account...
-          </p>
-        </div>
-      </div>
-    );
+    return <Navigate to="/login" replace />;
   }
 
   return (

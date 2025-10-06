@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../lib/store/store";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/atoms/Logo";
 import ChangeThemeBtn from "../components/atoms/clickeable/ChangeThemeBtn";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase/firebaseConfig";
+import { API_BASE_URL } from "../lib/api/config";
 
 interface DashboardStats {
   total_users: number;
@@ -51,8 +52,6 @@ interface RecentFeedbackItem {
   message_preview?: string | null;
 }
 
-const API_BASE_URL = "http://127.0.0.1:8000";
-
 const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [ratingsDist, setRatingsDist] = useState<RatingsDistribution | null>(
@@ -66,19 +65,6 @@ const AdminDashboard = () => {
 
   const user = useSelector((state: RootState) => state.user);
   const navigate = useNavigate();
-
-  // Tailwind-safe color classes (avoid dynamic class strings so purge works)
-  const colorClasses = useMemo(
-    () => ({
-      blue: "text-blue-600 dark:text-blue-400",
-      green: "text-green-600 dark:text-green-400",
-      purple: "text-purple-600 dark:text-purple-400",
-      yellow: "text-yellow-600 dark:text-yellow-400",
-      red: "text-red-600 dark:text-red-400",
-      gray: "text-gray-900 dark:text-white",
-    }),
-    []
-  );
 
   const loadDashboardStats = useCallback(async () => {
     setIsLoading(true);
@@ -96,12 +82,11 @@ const AdminDashboard = () => {
         setStats(data);
       } else if (response.status === 403) {
         setError("Access denied. Admin privileges required.");
-        setTimeout(() => navigate("/chat"), 2000);
+        setTimeout(() => navigate("/chat"), 1500);
       } else {
         setError("Failed to load dashboard statistics");
       }
-    } catch (err) {
-      console.error("Error loading dashboard:", err);
+    } catch {
       setError("Network error while loading dashboard");
     } finally {
       setIsLoading(false);
@@ -119,8 +104,8 @@ const AdminDashboard = () => {
       if (!res.ok) return;
       const data: RatingsDistribution = await res.json();
       setRatingsDist(data);
-    } catch (e) {
-      console.error("Failed to load ratings distribution", e);
+    } catch {
+      /* noop */
     }
   }, [user.db_id]);
 
@@ -135,8 +120,8 @@ const AdminDashboard = () => {
       if (!res.ok) return;
       const data: RecentFeedbackItem[] = await res.json();
       setRecentFeedback(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Failed to load recent feedback", e);
+    } catch {
+      /* noop */
     }
   }, [user.db_id]);
 
@@ -164,41 +149,60 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase
       await signOut(auth);
-      // Navigate to login page
       navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch {
+      /* noop */
     }
   };
+
+  // Panel wrapper
+  const Panel: React.FC<{
+    className?: string;
+    title?: string;
+    children: React.ReactNode;
+  }> = ({ className = "", title, children }) => (
+    <div
+      className={[
+        "rounded-xl shadow",
+        "bg-third dark:bg-background2-dark",
+        "border border-secondary dark:border-background-dark/40",
+        "hover-raise moving-sheen", // <-- add
+        className,
+      ].join(" ")}
+    >
+      {title ? (
+        <div className="px-5 py-3 border-b border-secondary dark:border-background-dark/40">
+          <h2 className="text-base font-outfit">{title}</h2>
+        </div>
+      ) : null}
+      <div className="p-5">{children}</div>
+    </div>
+  );
+
+  // StatCard
   const StatCard = ({
     title,
     value,
     subtext,
-    color = "blue",
   }: {
     title: string;
     value: number | string;
     subtext?: string;
-    color?: keyof typeof colorClasses;
   }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            {title}
-          </p>
-          <p className={`text-2xl font-bold ${colorClasses[color]} mt-1`}>
-            {typeof value === "number" ? value.toLocaleString() : value}
-          </p>
-          {subtext && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {subtext}
-            </p>
-          )}
-        </div>
-      </div>
+    <div
+      className={[
+        "rounded-xl p-5 shadow",
+        "bg-third dark:bg-background2-dark",
+        "border border-secondary dark:border-background-dark/40",
+        "hover-raise moving-sheen", // <-- add
+      ].join(" ")}
+    >
+      <p className="text-sm opacity-70">{title}</p>
+      <p className="text-2xl font-outfit mt-1">
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </p>
+      {subtext ? <p className="text-xs opacity-60 mt-1">{subtext}</p> : null}
     </div>
   );
 
@@ -214,12 +218,10 @@ const AdminDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-center min-h-screen bg-background dark:bg-background-dark">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">
-            Loading admin dashboard...
-          </p>
+          <div className="animate-spin h-10 w-10 border-2 border-text dark:border-text-dark border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Loading admin dashboard…</p>
         </div>
       </div>
     );
@@ -227,12 +229,12 @@ const AdminDashboard = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-background dark:bg-background-dark">
+        <div className="text-center space-y-4">
+          <p className="error">{error}</p>
           <button
             onClick={() => navigate("/chat")}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="button-styled !w-auto px-6 py-2 rounded-lg"
           >
             Go to Chat
           </button>
@@ -242,48 +244,34 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background dark:bg-background-dark">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow">
-        <div className="px-6 py-4">
+      <div className="border-b border-secondary dark:border-background-dark/40 bg-background dark:bg-background2-dark">
+        <div className="px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Logo />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Admin Dashboard
-              </h1>
+              <Link to="/">
+                <Logo />
+              </Link>
+              <h1>Admin Dashboard</h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <ChangeThemeBtn />
               <button
                 onClick={handleRefresh}
-                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2 whitespace-nowrap"
+                className="thin-button !w-auto rounded-lg px-4 py-2"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                <span>Refresh Data</span>
+                Refresh Data
               </button>
-
               <button
                 onClick={() => navigate("/chat")}
-                className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 whitespace-nowrap"
+                className="thin-button !w-auto rounded-lg px-4 py-2"
               >
                 Go to Chat
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600 whitespace-nowrap"
+                className="button-styled !w-auto rounded-lg px-4 py-2"
               >
                 Logout
               </button>
@@ -292,31 +280,26 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-6 py-8">
-        {/* Overview Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Overview
-          </h2>
+      {/* Main */}
+      <div className="px-6 py-8 max-w-7xl mx-auto space-y-8">
+        {/* Overview */}
+        <section>
+          <h2 className="mb-4">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total Users"
               value={stats?.total_users ?? 0}
               subtext={`+${stats?.new_users_7d ?? 0} this week`}
-              color="blue"
             />
             <StatCard
               title="Active Sessions"
               value={stats?.active_sessions ?? 0}
               subtext={`${stats?.archived_sessions ?? 0} archived`}
-              color="green"
             />
             <StatCard
               title="Total Messages"
               value={stats?.total_messages ?? 0}
               subtext={`+${stats?.new_messages_30d ?? 0} last 30 days`}
-              color="purple"
             />
             <StatCard
               title="Average Rating"
@@ -326,30 +309,23 @@ const AdminDashboard = () => {
                   : "0.0"
               }
               subtext={`from ${stats?.users_who_commented ?? 0} users`}
-              color="yellow"
             />
           </div>
-        </div>
+        </section>
 
-        {/* Engagement Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            User Engagement
-          </h2>
+        {/* Engagement */}
+        <section>
+          <h2 className="mb-4">User Engagement</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
               title="Total Reactions"
               value={(stats?.total_likes ?? 0) + (stats?.total_dislikes ?? 0)}
-              subtext={`👍 ${stats?.total_likes ?? 0} / 👎 ${
-                stats?.total_dislikes ?? 0
-              }`}
-              color="blue"
+              subtext={`👍 ${stats?.total_likes ?? 0} / 👎 ${stats?.total_dislikes ?? 0}`}
             />
             <StatCard
               title="Total Comments"
               value={stats?.total_comments ?? 0}
               subtext={`${stats?.users_who_commented ?? 0} unique users`}
-              color="blue"
             />
             <StatCard
               title="Like Ratio"
@@ -357,24 +333,17 @@ const AdminDashboard = () => {
                 typeof stats?.total_likes === "number" &&
                 typeof stats?.total_dislikes === "number" &&
                 stats.total_likes + stats.total_dislikes > 0
-                  ? `${(
-                      (stats.total_likes /
-                        (stats.total_likes + stats.total_dislikes)) *
-                      100
-                    ).toFixed(1)}%`
+                  ? `${((stats.total_likes / (stats.total_likes + stats.total_dislikes)) * 100).toFixed(1)}%`
                   : "N/A"
               }
               subtext="Positive feedback rate"
-              color="green"
             />
           </div>
-        </div>
+        </section>
 
-        {/* Performance Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            System Performance
-          </h2>
+        {/* Performance */}
+        <section>
+          <h2 className="mb-4">System Performance</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total Tokens"
@@ -383,7 +352,6 @@ const AdminDashboard = () => {
                 (stats?.total_output_tokens ?? 0)
               }
               subtext="Input + Output"
-              color="blue"
             />
             <StatCard
               title="Avg Output Tokens"
@@ -393,35 +361,25 @@ const AdminDashboard = () => {
                   : "0"
               }
               subtext="Per response"
-              color="blue"
             />
             <StatCard
               title="Avg Generation Time"
-              value={`${((stats?.avg_generation_time ?? 0) as number).toFixed(
-                0
-              )}ms`}
+              value={`${((stats?.avg_generation_time ?? 0) as number).toFixed(0)}ms`}
               subtext={`Max: ${stats?.max_generation_time ?? 0}ms`}
-              color="blue"
             />
             <StatCard
               title="Active Admins"
               value={stats?.active_admins ?? 0}
               subtext={`${stats?.admin_actions_30d ?? 0} actions (30d)`}
-              color="blue"
             />
           </div>
-        </div>
+        </section>
 
         {/* Ratings Distribution */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Ratings Distribution
-          </h2>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <section>
+          <Panel title="Ratings Distribution">
             {!ratingsDist ? (
-              <p className="text-gray-600 dark:text-gray-300">
-                Loading ratings…
-              </p>
+              <p>Loading ratings…</p>
             ) : (
               <div className="space-y-3">
                 {(
@@ -445,17 +403,17 @@ const AdminDashboard = () => {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <StarRow value={row.stars} />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-sm opacity-70">
                             {row.label}
                           </span>
                         </div>
-                        <span className="text-sm text-gray-700 dark:text-gray-200">
+                        <span className="text-sm">
                           {row.value} ({pct}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2 overflow-hidden">
+                      <div className="w-full bg-secondary/50 dark:bg-background-dark/40 rounded h-2 overflow-hidden">
                         <div
-                          className="h-2 bg-blue-500 dark:bg-blue-400"
+                          className="h-2 bg-text dark:bg-text-dark"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -464,121 +422,109 @@ const AdminDashboard = () => {
                 })}
               </div>
             )}
-          </div>
-        </div>
+          </Panel>
+        </section>
 
         {/* Recent Feedback */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Recent Feedback
-          </h2>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow divide-y divide-gray-200 dark:divide-gray-700">
+        <section>
+          <Panel title="Recent Feedback">
             {!recentFeedback.length ? (
-              <div className="p-6 text-gray-600 dark:text-gray-300">
-                No recent feedback yet.
-              </div>
+              <div className="opacity-70">No recent feedback yet.</div>
             ) : (
-              recentFeedback.map((fb) => (
-                <div
-                  key={`${fb.session_id}-${fb.message_id}-${fb.created_at}`}
-                  className="p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="mr-2">Session:</span>
-                      <span className="font-mono">
-                        {fb.session_id.slice(0, 8)}…
-                      </span>
-                      <span className="mx-2">•</span>
-                      <span>{new Date(fb.created_at).toLocaleString()}</span>
+              <div className="divide-y divide-secondary dark:divide-background-dark/40">
+                {recentFeedback.map((fb) => (
+                  <div
+                    key={`${fb.session_id}-${fb.message_id}-${fb.created_at}`}
+                    className="py-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm opacity-70">
+                        <span className="mr-2">Session:</span>
+                        <span className="font-mono">
+                          {fb.session_id.slice(0, 8)}…
+                        </span>
+                        <span className="mx-2">•</span>
+                        <span>{new Date(fb.created_at).toLocaleString()}</span>
+                      </div>
+                      {typeof fb.rating === "number" && (
+                        <div className="text-sm">
+                          <StarRow value={fb.rating} />
+                        </div>
+                      )}
                     </div>
-                    {typeof fb.rating === "number" && (
-                      <div className="text-sm text-gray-700 dark:text-gray-200">
-                        <StarRow value={fb.rating} />
+                    {fb.message_preview && (
+                      <div className="mt-2 text-xs opacity-70 dark:text-text-dark">
+                        <span className="uppercase tracking-wider ">
+                          Message
+                        </span>
+                        : {fb.message_preview}
+                      </div>
+                    )}
+                    {fb.comment && (
+                      <div className="mt-2 dark:text-text-dark">
+                        “{fb.comment}”
                       </div>
                     )}
                   </div>
-                  {fb.message_preview && (
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="uppercase tracking-wider">Message</span>:{" "}
-                      {fb.message_preview}
-                    </div>
-                  )}
-                  {fb.comment && (
-                    <div className="mt-2 text-gray-800 dark:text-gray-100">
-                      “{fb.comment}”
-                    </div>
-                  )}
-                </div>
-              ))
+                ))}
+              </div>
             )}
-          </div>
-        </div>
+          </Panel>
+        </section>
 
-        {/* Detailed Stats Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Detailed Statistics
-            </h2>
-          </div>
-          <div className="p-6">
+        {/* Detailed Statistics */}
+        <section>
+          <Panel title="Detailed Statistics">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm opacity-70">
                     New Users (30 days)
                   </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm font-medium">
                     {stats?.new_users_30d ?? 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm opacity-70">
                     New Sessions (30 days)
                   </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm font-medium">
                     {stats?.new_sessions_30d ?? 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Deleted Sessions
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm opacity-70">Deleted Sessions</span>
+                  <span className="text-sm font-medium">
                     {stats?.deleted_sessions ?? 0}
                   </span>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    User Messages
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm opacity-70">User Messages</span>
+                  <span className="text-sm font-medium">
                     {stats?.user_messages ?? 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Assistant Messages
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm opacity-70">Assistant Messages</span>
+                  <span className="text-sm font-medium">
                     {stats?.assistant_messages ?? 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm opacity-70">
                     Admin Actions (30 days)
                   </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm font-medium">
                     {stats?.admin_actions_30d ?? 0}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Panel>
+        </section>
       </div>
     </div>
   );

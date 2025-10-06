@@ -113,6 +113,50 @@
     .hoverable-box{
         @apply hover:bg-secondary dark:hover:bg-background2-dark transition-colors duration-200 ease-in-out rounded-full p-1
     }
+
+    /* Subtle lift + shadow on hover */
+  .hover-raise {
+    @apply relative transition-transform duration-200 ease-out will-change-transform hover:shadow-lg;
+  }
+  .hover-raise:hover {
+    transform: translateY(-1px) scale(1.01);
+  }
+
+  /* Moving sheen that looks like a traveling shadow highlight */
+  .moving-sheen {
+    position: relative;
+    overflow: hidden;            /* keep the sheen inside rounded corners */
+  }
+  .moving-sheen::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    /* neutral, theme-friendly highlight that reads in both modes */
+    background: linear-gradient(
+      120deg,
+      transparent 0%,
+      rgba(0,0,0,0.06) 18%,
+      transparent 36%
+    );
+    transform: translateX(-160%);
+    pointer-events: none;
+    opacity: 0;                  /* shown only on hover */
+  }
+  .moving-sheen:hover::before {
+    opacity: 1;
+    animation: sheen-sweep 1.2s ease;
+  }
+
+  @keyframes sheen-sweep {
+    to { transform: translateX(160%); }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .hover-raise { transition: none; }
+    .moving-sheen:hover::before { animation: none; opacity: 0.08; }
+  }
 }
 
 @layer utilities{
